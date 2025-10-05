@@ -1,3 +1,5 @@
+"use client";
+
 import { format } from "date-fns"; 
 
 import { Card } from "@/components/ui/card";
@@ -12,7 +14,7 @@ interface UserMessageProps {
 const UserMessage = ({ content }: UserMessageProps) => {
     return (
         <div className="flex justify-end pb-4 pr-2 pl-10"> 
-          <Card className="rounded-lg bg-muted p-3 shadow-none border-none max-w-[80%] break-works">
+          <Card className="rounded-lg bg-muted p-3 shadow-none border-none max-w-[80%] break-words">
             {content}
           </Card>
         </div>
@@ -30,7 +32,7 @@ const FragmentCard = ({
     isActiveFragment,
     onFragmentClick,
 }: FragmentCardProps) => {
-    retrun (
+    return (
         <button
         className={ cn(
             "flex items-start text-start gap-2 border rounded-lg bg-muted w-fit p-3 hover:bg-secondary transition-colors",
@@ -41,7 +43,7 @@ const FragmentCard = ({
     >
         <Code2Icon className="size-4 mt-0.5" />
         <div className="flex flex-col flex-1">
-            <span className="text-small font-medium line-clamp-1">
+            <span className="text-sm font-medium line-clamp-1">
                 {fragment.title}
             </span>
             <span className="text-sm">
@@ -66,7 +68,6 @@ interface AssistantMessageProps {
 
 const AssistantMessage =({
     content,
-    role,
     fragment,
     createdAt,
     isActiveFragment,
@@ -121,7 +122,7 @@ export const MessageCard =({
     type,
 }: MessageCardProps) => {
     if (role === "ASSISTANT") {
-        return(
+        return (
            <AssistantMessage
              content={content}
              fragment={fragment}

@@ -1,3 +1,6 @@
+
+"use client";
+
 import { z } from "zod";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -19,7 +22,7 @@ interface Props {
 const formSchema = z.object ({
     value: z.string()
             .min(1, {message: "Message is required "})
-            .max(1, {message: "Message is too long "}),  
+            .max(10000, {message: "Message is too long "}),  
 })
 
 export const MessageForm = ({ projectId }: Props) => {
@@ -79,7 +82,7 @@ export const MessageForm = ({ projectId }: Props) => {
                   onBlur={() => setIsFocused(false)}    
                   minRows={2}
                   maxRows={8}
-                  className="pt- resize-none border-none w-full outline-none bg-transparent"
+                  className="pt-4 resize-none border-none w-full outline-none bg-transparent"
                   placeholder="what do you want to build"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
@@ -93,8 +96,8 @@ export const MessageForm = ({ projectId }: Props) => {
             <div className="flex gap-x-2 items-end justify-between pt-2">
                 <div className="text-[10px] text-muted-foreground font-mono">
                    <kbd className="ml-auto pointer-events-auto inline-flex h-5 select-none items-center
-                   gap-1 rounded border bg-muted px-1.5 font-mon text-[10px] font-medium text-muted-foreground">
-                    <span>#8984</span>Enter
+                   gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                    <span>{"\u2318"} </span>Enter
                    </kbd>
                    &nbsp;to submit
                 </div>

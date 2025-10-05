@@ -1,3 +1,5 @@
+"use client";
+
 import prism from "prismjs"; 
 import { useEffect } from "react";
 import "prismjs/components/prism-javascript";
@@ -24,7 +26,7 @@ export const CodeView = ({
         <pre
         className="p-2 bg-transparent border-none rounded-none m-0 text-xs"
         >
-            <code className={"language-${lang}"}>
+            <code className={`language-${lang}`}>
               {code}
             </code>
         </pre>

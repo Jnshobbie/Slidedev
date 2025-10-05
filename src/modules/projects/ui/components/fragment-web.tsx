@@ -1,9 +1,11 @@
+
 import { useState } from "react";
 import { ExternalLinkIcon, RefreshCcwIcon } from "lucide-react";
 
 import { Fragment } from "@/generated/prisma";
 import { Button } from "@/components/ui/button"; 
-import { Hint } from "@/components/hint"; 
+import { Hint } from "@/components/hint";
+
 
 interface Props {
     data: Fragment;
@@ -59,10 +61,11 @@ export function FragmentWeb({ data }: Props) {
                 </Hint>
             </div>
             <iframe 
+              key={fragmentKey}
               className="h-full w-full"
               sandbox="allow-forms allow-scripts allow-same-origin"
               loading="lazy"
-              src="{data.sandboxUrl}"
+              src={data.sandboxUrl}
             />
         </div>
     )
