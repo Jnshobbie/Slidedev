@@ -16,7 +16,7 @@ interface AgentState {
 export const codeAgentFunction = inngest.createFunction(
   { id: "code-agent" },
   { event: "code-agent/run" },
-  async ({ event }) => {
+  async ({ event, step }) => {
     const sandboxId = await step.run("get-sandbox-id", async () => {
       const sandbox = await Sandbox.create("slide-nextjs-test-1"); 
       return sandbox.sandboxId; 
@@ -27,7 +27,7 @@ export const codeAgentFunction = inngest.createFunction(
       description: "An expert coding agent",
       system: PROMPT,
       model: openai({ 
-        model: "gpt-5-nano",
+        model: "gpt-4.1",
         defaultParameters: {
           temperature: 0.1, 
         }, 
@@ -80,7 +80,7 @@ export const codeAgentFunction = inngest.createFunction(
           ) =>  {
             const newFiles= await step?.run("createOrUpdateFiles", async() => {
               try {
-                const updateFiles = network.state.data.files || {};
+                const updatedFiles = network.state.data.files || {};
                 const sandbox = await getSandbox(sandboxId);
                 for (const file of files) {
                   await sandbox.files.write(file.path, file.content); 
@@ -108,7 +108,7 @@ export const codeAgentFunction = inngest.createFunction(
             return await step?.run("readFiles", async () => {
               try {
                 const sandbox = await getSandbox(sandboxId);
-                const content = [];
+                const contents = [];
                 for (const file of files) {
                   const content = await sandbox.files.read(file); 
                   contents.push({ path: file, content });
@@ -156,7 +156,7 @@ export const codeAgentFunction = inngest.createFunction(
 
     const isError = 
       !result.state.data.summary || 
-      object.keys(result.state.data.files || {}).length ===0; 
+      Object.keys(result.state.data.files || {}).length ===0; 
 
     const sandboxUrl= await step.run("get-sandbox-url", async () => {
       const sandbox = await getSandbox(sandboxId); 
