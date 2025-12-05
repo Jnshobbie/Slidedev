@@ -112,6 +112,36 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Add this to your globals.css file */
+
+@layer utilities {
+  /* Better shadow for light mode */
+  .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+}
+
+/* Enhanced shadow for dark mode */
+.dark .shadow-sm {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4);
+}
+
+/* Custom class to remove borders in dark mode - safe and targeted */
+@layer utilities {
+  .no-border-dark {
+    border-color: hsl(var(--border));
+  }
+  
+  .dark .no-border-dark {
+    border-color: transparent !important;
+  }
+  
+  /* Also target Card components in dark mode */
+  .dark [data-slot="card"] {
+    border-color: transparent !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

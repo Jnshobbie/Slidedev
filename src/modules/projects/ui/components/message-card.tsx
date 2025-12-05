@@ -81,7 +81,7 @@ const AssistantMessage =({
         )}>
             <div className="flex items-center gap-2 pl-2 mb-2">
                 {/* add Logo */}
-                <span className="text-sm font-medium">Vibe</span>
+                <span className="text-sm font-medium">Slide</span>
                 <span className="text-xs text-muted-foreground opacity-0 transition-opacity
                 group-hover:opacity-100">
                     {format(createdAt, "HH:mm 'on' MMM dd, yyyy")}

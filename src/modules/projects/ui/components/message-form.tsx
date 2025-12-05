@@ -1,4 +1,3 @@
-
 "use client";
 
 import { z } from "zod";
@@ -12,14 +11,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { cn } from  "@/lib/utils"; 
 import { useTRPC } from "@/trpc/client";
-import { Button } from "@/components/ui/button"; 
 import { Form, FormField } from "@/components/ui/form";
 import { Usage } from "./usage";
 import { useRouter } from "next/navigation";
 
 interface Props {
     projectId: string;
-}; 
+}
 
 const formSchema = z.object ({
     value: z.string()
@@ -84,9 +82,11 @@ export const MessageForm = ({ projectId }: Props) => {
             <form 
               onSubmit={form.handleSubmit(onSubmit)}
               className={cn(
-                "relative border p-4 pt-1 rounded-xl bg-sidebar dark:bg-sidebar transition-all", 
-                isFocused && "shadow-xs", 
-                showUsage && "rounded-t-none",
+                "relative rounded-xl p-3 transition-all",
+                "border no-border-dark bg-card shadow-sm",
+                "dark:bg-sidebar dark:shadow-none",
+                isFocused && "ring-2 ring-primary/20 border-primary/50 dark:border-primary/30", 
+                showUsage && "rounded-t-none border-t-0 dark:border-t-0",
               )}
             >
             <FormField 
@@ -99,7 +99,7 @@ export const MessageForm = ({ projectId }: Props) => {
                   onBlur={() => setIsFocused(false)}    
                   minRows={2}
                   maxRows={8}
-                  className="pt-4 resize-none border-none w-full outline-none bg-transparent"
+                  className="w-full resize-none border-none outline-none bg-transparent text-foreground placeholder:text-muted-foreground text-sm leading-relaxed"
                   placeholder="what do you want to build"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
@@ -110,28 +110,32 @@ export const MessageForm = ({ projectId }: Props) => {
                 />
               )}
             />
-            <div className="flex gap-x-2 items-end justify-between pt-2">
-                <div className="text-[10px] text-muted-foreground font-mono">
-                   <kbd className="ml-auto pointer-events-auto inline-flex h-5 select-none items-center
-                   gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-                    <span>{"\u2318"} </span>Enter
+            <div className="flex gap-x-2 items-center justify-between pt-2 mt-1 border-t border-border/30 dark:border-transparent">
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                   <kbd className="inline-flex h-5 select-none items-center gap-0.5 rounded px-1.5 font-mono text-[10px] font-medium text-muted-foreground border border-border/50 bg-muted shadow-sm dark:border-transparent dark:shadow-none">
+                    <span className="text-xs">{"\u2318"}</span>
+                    <span>Enter</span>
                    </kbd>
-                   &nbsp;to submit
+                   <span>to submit</span>
                 </div>
-                <Button
-                disabled={isButtonDisabled}
+                <button
+                  type="submit"
+                  disabled={isButtonDisabled}
                   className={cn(
-                    "size-8 rounded-full",
-                    isButtonDisabled && "bg-muted-foreground border"
+                    "inline-flex items-center justify-center rounded-full transition-all duration-200 shrink-0",
+                    "size-8",
+                    "[&_svg]:size-4 [&_svg]:shrink-0",
+                    isButtonDisabled
+                      ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
+                      : "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 hover:shadow"
                   )}
                 >
                   {isPending ? (
-                    <Loader2Icon className="size-4 animate-spin" />
+                    <Loader2Icon className="animate-spin" />
                   ) : ( 
                     <ArrowUpIcon />
                   )}
-
-                </Button>
+                </button>
             </div>
             </form>
         </Form>

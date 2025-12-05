@@ -55,7 +55,7 @@ export const codeAgentFunction = inngest.createFunction(
                 });
                 return result.stdout;
               } catch (e) {
-                console.error(
+                console.error( 
                   `Command failed: ${e} \nstdout: ${buffers.stdout}\nstderr: ${buffers.stderr}`,
                 );
                 return `Command failed: ${e} \nstdout: ${buffers.stdout}\nstderr: ${buffers.stderr}`;
@@ -199,4 +199,4 @@ export const codeAgentFunction = inngest.createFunction(
       summary: result.state.data.summary,  
     };
   },
-); 
+);

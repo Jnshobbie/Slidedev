@@ -23,7 +23,7 @@ interface TreeViewProps {
     data: TreeItem[];
     value: string | null;
     onSelect?: (value: string) => void;
-};
+}
 
 export const TreeView = ({
     data,
@@ -33,10 +33,10 @@ export const TreeView = ({
     return (
         <SidebarProvider>
             <Sidebar collapsible="none" className="w-full">
-                <SidebarContent>
+                <SidebarContent className="flex flex-col">
                     <SidebarGroup>
                         <SidebarGroupContent>
-                            <SidebarMenu>
+                            <SidebarMenu className="flex flex-col">
                             {data.map((item, index) => (
                                 <Tree 
                                 key={index}
@@ -61,7 +61,7 @@ interface TreeProps {
     selectedValue?: string | null;
     onSelect?: (value: string) => void;
     parentPath: string;
-}; 
+}
 
 const Tree = ({item, selectedValue, onSelect, parentPath}: TreeProps) => {
     const [name, ...items] = Array.isArray(item) ? item : [item];
@@ -74,7 +74,7 @@ const Tree = ({item, selectedValue, onSelect, parentPath}: TreeProps) => {
         return (
             <SidebarMenuButton
               isActive={isSelected}
-              className="data-[active=true]: bg-transparent"
+              className="data-[active=true]:bg-transparent"
               onClick={() => onSelect?.(currentPath)}
             >
                 <FileIcon />
@@ -87,9 +87,9 @@ const Tree = ({item, selectedValue, onSelect, parentPath}: TreeProps) => {
 
     // its a folder
     return (
-        <SidebarMenuItem>
+        <SidebarMenuItem className="flex flex-col">
             <Collapsible
-              className="group/collapsible [&[data-state=open]>button.svg:first-child]: rotate-90"
+              className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90 flex flex-col"
               defaultOpen
             >
               <CollapsibleTrigger asChild>
@@ -102,7 +102,7 @@ const Tree = ({item, selectedValue, onSelect, parentPath}: TreeProps) => {
               </SidebarMenuButton>
               </CollapsibleTrigger>
               <CollapsibleContent>
-              <SidebarMenuSub>
+              <SidebarMenuSub className="flex flex-col">
                 {items.map((subItem, index) => (
                     <Tree 
                     key={index}
