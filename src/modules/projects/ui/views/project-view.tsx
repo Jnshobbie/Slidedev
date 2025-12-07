@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 
 import { Fragment } from "@/generated/prisma"; 
 
@@ -40,9 +41,12 @@ export const ProjectView = ({ projectId }: Props) => {
             minSize={20}
             className="flex flex-col min-h-0"
           >
+            <ErrorBoundary fallback={<p>Failed to load project header.</p>}>
             <Suspense fallback={<p>Loading project...</p>}>
               <ProjectHeader projectId={projectId}/>
             </Suspense>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={<p>Messages container error</p>}>
             <Suspense fallback={<p>Loading messages...</p>}>
               <MessagesContainer 
                 projectId={projectId} 
@@ -50,6 +54,7 @@ export const ProjectView = ({ projectId }: Props) => {
                 setActiveFragment={setActiveFragment}
               />
             </Suspense> 
+            </ErrorBoundary>
           </ResizablePanel>
           
           <ResizableHandle className="hover:bg-primary transition-colors" />

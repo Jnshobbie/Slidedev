@@ -1,6 +1,7 @@
 import Link from "next/link"; 
 import { CrownIcon, ZapIcon } from "lucide-react"; 
 import { formatDuration, intervalToDuration } from "date-fns"; 
+import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -14,6 +15,21 @@ interface Props {
 export const Usage = ({ points, msBeforeNext}: Props) => {
     const { has } = useAuth();
     const hasProAccess = has?.({ plan: "pro"});
+
+    const resetTime = useMemo(() => {
+        try{
+            return formatDuration(
+                intervalToDuration({
+                    start: new Date(),
+                    end: new Date(Date.now() + msBeforeNext),
+                }),
+                { format: ["months", "days", "hours"] }
+            )
+        } catch (error) {
+            console.error("Error calculating reset time:", error);
+            return "unknown"; 
+        }
+    }, [msBeforeNext]);
     
     return (
         <div className="rounded-t-xl px-4 py-3 bg-card dark:bg-sidebar border border-b-0 dark:border-transparent shadow-sm dark:shadow-none">
@@ -27,14 +43,7 @@ export const Usage = ({ points, msBeforeNext}: Props) => {
                             {points} {hasProAccess ? "Pro" : "Free"} {points === 1 ? "Credit" : "Credits"}
                         </p>
                         <p className="text-xs text-muted-foreground leading-none">
-                            Resets in{" "}
-                            {formatDuration(
-                                intervalToDuration({
-                                    start: new Date(),
-                                    end: new Date(Date.now() + msBeforeNext),
-                                }),
-                                { format: ["months", "days", "hours"] }
-                            )}
+                            Resets in{" "}{resetTime}
                         </p>
                     </div>
                 </div>
