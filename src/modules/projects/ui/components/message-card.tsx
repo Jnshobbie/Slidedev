@@ -1,22 +1,82 @@
 "use client";
 
 import { format } from "date-fns"; 
+import Image from "next/image";
 
-import { Card } from "@/components/ui/card";
 import { Fragment, MessageRole, MessageType } from "@/generated/prisma";
 import { cn } from "@/lib/utils";
-import { ChevronRightIcon, Code2Icon } from "lucide-react";
+import { ChevronRightIcon, Code2Icon, FileIcon, VideoIcon } from "lucide-react";
+
+interface FileAttachment {
+  url: string;
+  name: string;
+  size: number;
+  type: string;
+}
 
 interface UserMessageProps {
     content: string;
+    attachments?: FileAttachment[];
 }
 
-const UserMessage = ({ content }: UserMessageProps) => {
+const UserMessage = ({ content, attachments }: UserMessageProps) => {
     return (
         <div className="flex justify-end pb-4 pr-2 pl-10"> 
-          <Card className="rounded-lg bg-muted p-3 shadow-none border-none max-w-[80%] break-words">
-            {content}
-          </Card>
+          <div className="rounded-lg bg-muted p-3 border border-transparent dark:border-transparent shadow-none max-w-[80%] break-words space-y-2">
+            {/* Display attachments */}
+            {attachments && attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                    {attachments.map((file, index) => {
+                        const isImage = file.type.startsWith('image/');
+                        const isVideo = file.type.startsWith('video/');
+                        
+                        return (
+                            <div key={index} className="relative">
+                                {isImage && (
+                                    <a href={file.url} target="_blank" rel="noopener noreferrer">
+                                        <Image
+                                            src={file.url}
+                                            alt={file.name}
+                                            width={200}
+                                            height={200}
+                                            className="rounded-md object-cover max-h-48 hover:opacity-80 transition-opacity"
+                                        />
+                                    </a>
+                                )}
+                                {isVideo && (
+                                    <div className="flex items-center gap-2 bg-background/50 rounded-md px-3 py-2">
+                                        <VideoIcon className="size-4" />
+                                        <a 
+                                            href={file.url} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-sm hover:underline truncate max-w-[150px]"
+                                        >
+                                            {file.name}
+                                        </a>
+                                    </div>
+                                )}
+                                {!isImage && !isVideo && (
+                                    <div className="flex items-center gap-2 bg-background/50 rounded-md px-3 py-2">
+                                        <FileIcon className="size-4" />
+                                        <a 
+                                            href={file.url} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-sm hover:underline truncate max-w-[150px]"
+                                        >
+                                            {file.name}
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+            {/* Display text content */}
+            <div>{content}</div>
+          </div>
         </div>
     )
 }
@@ -25,7 +85,7 @@ interface FragmentCardProps {
     fragment: Fragment;
     isActiveFragment: boolean;
     onFragmentClick: (fragment: Fragment) => void;
-};
+}
 
 const FragmentCard = ({
     fragment,
@@ -34,8 +94,9 @@ const FragmentCard = ({
 }: FragmentCardProps) => {
     return (
         <button
-        className={ cn(
-            "flex items-start text-start gap-2 border rounded-lg bg-muted w-fit p-3 hover:bg-secondary transition-colors",
+        className={cn(
+            "flex items-start text-start gap-2 rounded-lg bg-muted w-fit p-3 transition-colors",
+            "border no-border-dark hover:bg-secondary",
             isActiveFragment &&
               "bg-primary text-primary-foreground border-primary hover:bg-primary",
         )}
@@ -64,7 +125,7 @@ interface AssistantMessageProps {
     isActiveFragment: boolean;
     onFragmentClick: (fragment: Fragment) => void;
     type: MessageType;
-};
+}
 
 const AssistantMessage =({
     content,
@@ -75,8 +136,8 @@ const AssistantMessage =({
     type,
 }: AssistantMessageProps) => {
     return (
-        <div className={ cn(
-            "flex flex-col group  px-2 pb-4", 
+        <div className={cn(
+            "flex flex-col group px-2 pb-4", 
             type === "ERROR" && "text-red-700 dark:text-red-500", 
         )}>
             <div className="flex items-center gap-2 pl-2 mb-2">
@@ -97,7 +158,6 @@ const AssistantMessage =({
                     />
                 )}
             </div>
-
         </div>
     )
 };
@@ -110,7 +170,8 @@ interface MessageCardProps {
     isActiveFragment: boolean;
     onFragmentClick: (fragment: Fragment) => void;
     type: MessageType;
-};
+    attachments?: FileAttachment[];
+}
 
 export const MessageCard =({
     content,
@@ -120,6 +181,7 @@ export const MessageCard =({
     isActiveFragment,
     onFragmentClick,
     type,
+    attachments,
 }: MessageCardProps) => {
     if (role === "ASSISTANT") {
         return (
@@ -135,6 +197,6 @@ export const MessageCard =({
     }
 
     return (
-        <UserMessage content={content}/>
+        <UserMessage content={content} attachments={attachments} />
     );
 };

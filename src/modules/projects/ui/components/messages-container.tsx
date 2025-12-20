@@ -26,7 +26,7 @@ export const MessagesContainer= ({
         projectId: projectId,
     }, {
         // Todo temporary live message update
-        refetchInterval: 2000,
+        refetchInterval: 5000,
     }));
 
      useEffect(() => {
@@ -64,6 +64,7 @@ export const MessagesContainer= ({
                           isActiveFragment={activeFragment?.id === message.fragment?.id}
                           onFragmentClick={() => setActiveFragment(message.fragment)}
                           type={message.type}
+                          attachments={message.attachments as Array<{url: string; name: string; size: number; type: string}> | undefined} // NEW: Pass attachments
                     />
                     ))}
                     {isLastMessageUser && <MessageLoading />}

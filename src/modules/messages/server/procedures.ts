@@ -6,6 +6,13 @@ import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { consumeCredits } from "@/lib/usage";
 
+const fileAttachmentSchema = z.object({
+  url: z.string(),
+  name: z.string(),
+  size: z.number(),
+  type: z.string(),
+});
+
 export const messagesRouter = createTRPCRouter ({
     getMany: protectedProcedure 
     .input(
@@ -37,8 +44,8 @@ export const messagesRouter = createTRPCRouter ({
           value: z.string()
             .min(1, {message: "Message is required "})
             .max(10000, {message: "Message is too long "}),
-          projectId: z.string().min(1, {message: "Project ID is required"}) 
-
+          projectId: z.string().min(1, {message: "Project ID is required"}),
+          attachments: z.array(fileAttachmentSchema).optional(), // NEW: Optional file attachments
         }), 
       )
       .mutation(async ({ input, ctx }) => {
@@ -71,7 +78,8 @@ export const messagesRouter = createTRPCRouter ({
                 projectId: existingProject.id, 
                 content: input.value,
                 role: "USER", 
-                type: "RESULT", 
+                type: "RESULT",
+                attachments: input.attachments || undefined, // NEW: Store attachments
             }
         });
         
@@ -80,6 +88,7 @@ export const messagesRouter = createTRPCRouter ({
             data: {
                 value: input.value,
                 projectId: input.projectId,
+                attachments: input.attachments, // NEW: Send attachments to AI
             },
         });
         
