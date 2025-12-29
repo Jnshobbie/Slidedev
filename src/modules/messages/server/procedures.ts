@@ -45,7 +45,8 @@ export const messagesRouter = createTRPCRouter ({
             .min(1, {message: "Message is required "})
             .max(10000, {message: "Message is too long "}),
           projectId: z.string().min(1, {message: "Project ID is required"}),
-          attachments: z.array(fileAttachmentSchema).optional(), // NEW: Optional file attachments
+          projectType: z.enum(["web", "mobile"]).optional(), // NEW: Optional projectType (form selector)
+          attachments: z.array(fileAttachmentSchema).optional(),
         }), 
       )
       .mutation(async ({ input, ctx }) => {
@@ -79,7 +80,7 @@ export const messagesRouter = createTRPCRouter ({
                 content: input.value,
                 role: "USER", 
                 type: "RESULT",
-                attachments: input.attachments || undefined, // NEW: Store attachments
+                attachments: input.attachments || undefined,
             }
         });
         
@@ -88,7 +89,9 @@ export const messagesRouter = createTRPCRouter ({
             data: {
                 value: input.value,
                 projectId: input.projectId,
-                attachments: input.attachments, // NEW: Send attachments to AI
+                attachments: input.attachments,
+                // Note: projectType is read from database in functions.ts
+                // We don't need to pass it here
             },
         });
         

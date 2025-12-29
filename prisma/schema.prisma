@@ -18,7 +18,8 @@ model Project {
   id String @id @default(uuid())
   name String 
   userId String
-  createAt DateTime @default(now())
+  projectType String @default("web") // NEW: "web" or "mobile"
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   messages Message[]
@@ -39,7 +40,7 @@ model Message {
   content String 
   role MessageRole
   type MessageType
-  attachments Json? // NEW: Store file URLs and metadata
+  attachments Json? // Store file URLs and metadata
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt 
 
@@ -66,4 +67,4 @@ model Usage {
   key String @id 
   points Int 
   expire DateTime?
-} 
+}

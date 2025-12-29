@@ -13,6 +13,7 @@ import {
 import { MessagesContainer } from "../components/messages-container";
 import { ProjectHeader } from "../components/project-header";
 import { FragmentWeb } from "../components/fragment-web"; 
+import { FragmentMobile } from "../fragment-mobile";// NEW: Import mobile fragment
 import { EyeIcon, CodeIcon, CrownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -23,10 +24,11 @@ import { cn } from "@/lib/utils";
  
 
 interface Props {
-    projectId: string; 
+    projectId: string;
+    projectType?: "web" | "mobile"; // NEW: Add projectType prop
 }
 
-export const ProjectView = ({ projectId }: Props) => {
+export const ProjectView = ({ projectId, projectType = "web" }: Props) => {
   const { has } = useAuth();
   const hasProAccess = has?.({ plan: "pro"});
 
@@ -49,7 +51,8 @@ export const ProjectView = ({ projectId }: Props) => {
             <ErrorBoundary fallback={<p>Messages container error</p>}>
             <Suspense fallback={<p>Loading messages...</p>}>
               <MessagesContainer 
-                projectId={projectId} 
+                projectId={projectId}
+                projectType={projectType} // NEW: Pass projectType
                 activeFragment={activeFragment}
                 setActiveFragment={setActiveFragment}
               />
@@ -111,11 +114,25 @@ export const ProjectView = ({ projectId }: Props) => {
               {/* Preview Tab */}
               {activeTab === "preview" && (
                 <div className="h-full w-full">
-                  {!!activeFragment && <FragmentWeb data={activeFragment} />}
-                  {!activeFragment && (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                      <p className="text-sm">No preview available</p>
-                    </div>
+                  {/* NEW: Show mobile or web preview based on projectType */}
+                  {projectType === "mobile" ? (
+                    <>
+                      {!!activeFragment && <FragmentMobile data={activeFragment} />}
+                      {!activeFragment && (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                          <p className="text-sm">No mobile preview available</p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {!!activeFragment && <FragmentWeb data={activeFragment} />}
+                      {!activeFragment && (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                          <p className="text-sm">No preview available</p>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}

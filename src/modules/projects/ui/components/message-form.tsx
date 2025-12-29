@@ -16,6 +16,7 @@ import { Form, FormField } from "@/components/ui/form";
 import { Usage } from "./usage";
 import { useRouter } from "next/navigation";
 import { useUploadThing } from "@/lib/uploadthing";
+import { ProjectTypeSelector, type ProjectType } from "@/components/project-type-selector";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +26,7 @@ import {
 
 interface Props {
     projectId: string;
+    projectType: ProjectType; // NEW: Pass this from parent
 }
 
 const formSchema = z.object({
@@ -40,7 +42,7 @@ interface FileAttachment {
   type: string;
 }
 
-export const MessageForm = ({ projectId }: Props) => {
+export const MessageForm = ({ projectId, projectType: initialProjectType }: Props) => {
     
     const trpc = useTRPC();
     const router = useRouter();
@@ -49,6 +51,7 @@ export const MessageForm = ({ projectId }: Props) => {
     const { data: usage } = useQuery(trpc.usage.status.queryOptions());
     const [attachments, setAttachments] = useState<FileAttachment[]>([]);
     const [isUploading, setIsUploading] = useState(false);
+    const [projectType, setProjectType] = useState<ProjectType>(initialProjectType);
 
     const { startUpload } = useUploadThing("messageAttachment");
 
@@ -136,6 +139,7 @@ export const MessageForm = ({ projectId }: Props) => {
         await createMessage.mutateAsync({
             value: values.value,
             projectId,
+            projectType, // NEW: Send project type with message
             attachments: attachments.length > 0 ? attachments : undefined,
         });
     };
@@ -174,7 +178,6 @@ export const MessageForm = ({ projectId }: Props) => {
                             <div key={index} className="relative group">
                                 {isImage ? (
                                     <div className="relative">
-                                        {/* Using regular img tag for external UploadThing URLs - Next.js Image has issues with external domains */}
                                         <img
                                             src={file.url}
                                             alt={file.name}
@@ -236,13 +239,12 @@ export const MessageForm = ({ projectId }: Props) => {
             />
             <div className="flex gap-x-2 items-center justify-between pt-2 mt-1 border-t no-border-dark">
                 <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                       <kbd className="inline-flex h-5 select-none items-center gap-0.5 rounded px-1.5 font-mono text-[10px] font-medium text-muted-foreground border no-border-dark bg-muted shadow-sm dark:shadow-none">
-                        <span className="text-xs">{"\u2318"}</span>
-                        <span>Enter</span>
-                       </kbd>
-                       <span>to submit</span>
-                    </div>
+                    {/* Project Type Selector - NEW */}
+                    <ProjectTypeSelector
+                      value={projectType}
+                      onChange={setProjectType}
+                      disabled={isPending}
+                    />
 
                     {/* File Upload Dropdown */}
                     <DropdownMenu>

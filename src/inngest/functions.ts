@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Sandbox } from "@e2b/code-interpreter"; 
 import { openai, createAgent, createTool, createNetwork, type Tool, type Message, createState } from "@inngest/agent-kit"; 
 
-import { FRAGMENT_TITLE_PROMPT, PROMPT, RESPONSE_PROMPT  } from "@/prompt";
+import { FRAGMENT_TITLE_PROMPT, PROMPT, RESPONSE_PROMPT, getPromptForProjectType } from "@/prompt";
 import { prisma } from "@/lib/db"; 
 
 import { inngest } from "./client";
@@ -12,18 +12,31 @@ import { SANDBOX_TIMEOUT } from "./types";
 interface AgentState {
   summary: string;
   files: { [path: string]: string }; 
-}; 
-
+}
 
 export const codeAgentFunction = inngest.createFunction(
   { id: "code-agent" },
   { event: "code-agent/run" },
   async ({ event, step }) => {
-    const sandboxId = await step.run("get-sandbox-id", async () => {
-      const sandbox = await Sandbox.create("slide-nextjs-test-1"); 
-      await sandbox.setTimeout(SANDBOX_TIMEOUT); // 25 minutes
-      return sandbox.sandboxId; 
+    // Get project type from database
+    const project = await step.run("get-project", async () => {
+      return await prisma.project.findUnique({
+        where: { id: event.data.projectId },
+        select: { projectType: true },
+      });
     });
+
+    const projectType = (project?.projectType as "web" | "mobile") || "web";
+    const isMobile = projectType === "mobile";
+
+    console.log(`🎯 Project type: ${projectType}, isMobile: ${isMobile}`);
+
+    // Only create E2B sandbox for web projects
+    const sandboxId = !isMobile ? await step.run("get-sandbox-id", async () => {
+      const sandbox = await Sandbox.create("slide-nextjs-test-1"); 
+      await sandbox.setTimeout(SANDBOX_TIMEOUT);
+      return sandbox.sandboxId; 
+    }) : null;
 
     const previousMessages = await step.run("get-previous-messages", async () => {
       const formattedMessages: Message[] = [];
@@ -33,7 +46,7 @@ export const codeAgentFunction = inngest.createFunction(
           projectId: event.data.projectId,
         },
         orderBy: {
-          createdAt: "desc", // change to "asc" if AI can't understand what is the latest message from user
+          createdAt: "desc",
         },
         take: 10,
       });
@@ -59,17 +72,55 @@ export const codeAgentFunction = inngest.createFunction(
       },
     );
 
+    // Use correct prompt based on project type
+    const systemPrompt = getPromptForProjectType(projectType);
+    
+    console.log(`📝 Using ${isMobile ? 'MOBILE' : 'WEB'} prompt`);
+
     const codeAgent = createAgent<AgentState>({
-      name: "code-agent",
-      description: "An expert coding agent",
-      system: PROMPT,
+      name: isMobile ? "mobile-code-agent" : "code-agent",
+      description: isMobile ? "An expert mobile app coding agent" : "An expert coding agent",
+      system: systemPrompt,
       model: openai({ 
         model: "gpt-4.1",
         defaultParameters: {
           temperature: 0.1, 
         }, 
       }),
-      tools: [
+      tools: isMobile ? [
+        // Mobile: Only file creation (no E2B sandbox)
+        createTool({
+          name: "createOrUpdateFiles", 
+          description: "Create or update React Native files for the mobile app", 
+          parameters: z.object({
+            files: z.array(
+              z.object({
+                path: z.string(), 
+                content: z.string(), 
+              }),
+            ),
+          }),
+          handler: async (
+            { files }, 
+            { step, network }: Tool.Options<AgentState>
+          ) => {
+            const updatedFiles = await step?.run("createOrUpdateFiles", async () => {
+              const currentFiles = network.state.data.files || {};
+              for (const file of files) {
+                console.log(`📱 Creating mobile file: ${file.path}`);
+                currentFiles[file.path] = file.content;
+              }
+              return currentFiles;
+            });
+            
+            // CRITICAL: Update the network state with the new files
+            if (updatedFiles && typeof updatedFiles === "object") {
+              network.state.data.files = updatedFiles;
+            }
+          }
+        }),
+      ] : [
+        // Web: Full E2B tools (terminal, file operations)
         createTool({
           name: "terminal", 
           description: "Use the terminal to run commands", 
@@ -81,7 +132,7 @@ export const codeAgentFunction = inngest.createFunction(
               const buffers = { stdout: "", stderr: ""};
 
               try {
-                const sandbox = await getSandbox(sandboxId);
+                const sandbox = await getSandbox(sandboxId!);
                 const result = await sandbox.commands.run(command, {
                   onStdout: (data: string) => {
                     buffers.stdout += data;
@@ -102,7 +153,7 @@ export const codeAgentFunction = inngest.createFunction(
         }),
         createTool({
           name: "createOrUpdateFiles", 
-          description: "Create or update files in the sandbox", 
+          description: "Create or update files in the Next.js sandbox", 
           parameters: z.object({
             files: z.array(
               z.object({
@@ -115,10 +166,10 @@ export const codeAgentFunction = inngest.createFunction(
             { files }, 
             { step, network}: Tool.Options<AgentState>
           ) =>  {
-            const newFiles= await step?.run("createOrUpdateFiles", async() => {
+            const newFiles = await step?.run("createOrUpdateFiles", async() => {
               try {
                 const updatedFiles = network.state.data.files || {};
-                const sandbox = await getSandbox(sandboxId);
+                const sandbox = await getSandbox(sandboxId!);
                 for (const file of files) {
                   await sandbox.files.write(file.path, file.content); 
                   updatedFiles[file.path] = file.content;
@@ -135,16 +186,16 @@ export const codeAgentFunction = inngest.createFunction(
             }
           }
         }),
-        createTool ({
+        createTool({
           name: "readFiles", 
-          description: "Read files from the sandbox", 
+          description: "Read files from the Next.js sandbox", 
           parameters: z.object({
             files: z.array(z.string()), 
           }), 
           handler: async ({ files }, { step }) => {
             return await step?.run("readFiles", async () => {
               try {
-                const sandbox = await getSandbox(sandboxId);
+                const sandbox = await getSandbox(sandboxId!);
                 const contents = [];
                 for (const file of files) {
                   const content = await sandbox.files.read(file); 
@@ -203,7 +254,7 @@ export const codeAgentFunction = inngest.createFunction(
 
     const responseGenerator = createAgent({
       name: "response-generator",
-      description: "A fragment title generator",
+      description: "A response generator",
       system: RESPONSE_PROMPT,
       model: openai({ 
         model: "gpt-4o", 
@@ -217,15 +268,24 @@ export const codeAgentFunction = inngest.createFunction(
       output: responseOutput 
     } = await responseGenerator.run(result.state.data.summary);
 
-    
-      const isError = 
+    const isError = 
       !result.state.data.summary || 
-      Object.keys(result.state.data.files || {}).length ===0; 
+      Object.keys(result.state.data.files || {}).length === 0; 
 
-    const sandboxUrl= await step.run("get-sandbox-url", async () => {
-      const sandbox = await getSandbox(sandboxId); 
-      const host = sandbox.getHost(3000);
-      return `https://${host}`;  
+    // Get sandbox URL based on project type
+    const sandboxUrl = await step.run("get-sandbox-url", async () => {
+      if (isMobile) {
+        // For mobile: Just return a marker indicating it's a mobile project
+        // The frontend will create the Snack client-side
+        console.log("📱 Mobile project - code will be handled client-side");
+        return "mobile-preview://ready";
+      } else {
+        // Web project - use E2B sandbox
+        console.log("🌐 Creating E2B sandbox URL...");
+        const sandbox = await getSandbox(sandboxId!); 
+        const host = sandbox.getHost(3000);
+        return `https://${host}`;
+      }
     });
 
     await step.run("save-result", async () => {

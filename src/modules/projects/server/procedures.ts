@@ -52,7 +52,8 @@ export const projectsRouter = createTRPCRouter ({
             value: z.string() 
             .min(1, {message: "Value is required "})
             .max(1000, {message: "Value is required "}),
-            attachments: z.array(fileAttachmentSchema).optional(), // NEW: Optional file attachments
+            projectType: z.enum(["web", "mobile"]).default("web"), // NEW: Add projectType
+            attachments: z.array(fileAttachmentSchema).optional(),
         }), 
       )
       .mutation(async ({ input, ctx }) => {
@@ -76,12 +77,13 @@ export const projectsRouter = createTRPCRouter ({
             name: generateSlug(2, {
               format: "kebab", 
             }),
+            projectType: input.projectType, // NEW: Save projectType to database
             messages: {
               create: {
                 content: input.value,
                 role: "USER", 
                 type: "RESULT",
-                attachments: input.attachments || undefined, // NEW: Store attachments in first message
+                attachments: input.attachments || undefined,
               }
             }
           }
@@ -92,7 +94,7 @@ export const projectsRouter = createTRPCRouter ({
             data: {
                 value: input.value,
                 projectId: createdProject.id,
-                attachments: input.attachments, // NEW: Send attachments to AI
+                attachments: input.attachments,
             }
         });
         

@@ -18,6 +18,7 @@ import { PROJECT_TEMPLATES } from "../../constants";
 import { useClerk } from "@clerk/nextjs";
 import { useUploadThing } from "@/lib/uploadthing";
 import { cn } from "@/lib/utils";
+import { ProjectTypeSelector, type ProjectType } from "@/components/project-type-selector";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +45,7 @@ export const ProjectForm = () => {
   const clerk = useClerk();
   const queryClient = useQueryClient();
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
+  const [projectType, setProjectType] = useState<ProjectType>("web"); // NEW
   
   // Debug effect
   useEffect(() => {
@@ -55,6 +57,7 @@ export const ProjectForm = () => {
       });
     }
   }, [attachments]);
+
   const [isUploading, setIsUploading] = useState(false);
   const { startUpload } = useUploadThing("messageAttachment");
 
@@ -93,11 +96,11 @@ export const ProjectForm = () => {
                     size: originalFile.size,
                     type: originalFile.type || uploadedFile.type || 'application/octet-stream',
                 };
-                console.log(`📎 Creating attachment [${index}]:`, attachment);
+                console.log(`🔎 Creating attachment [${index}]:`, attachment);
                 return attachment;
             });
             
-            console.log("📎 New attachments array:", newAttachments);
+            console.log("🔎 New attachments array:", newAttachments);
             setAttachments(prev => {
                 const updated = [...prev, ...newAttachments];
                 console.log("📋 Updated attachments state:", updated);
@@ -157,6 +160,7 @@ export const ProjectForm = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     await createProject.mutateAsync({ 
       value: values.value,
+      projectType, // NEW: Send project type
       attachments: attachments.length > 0 ? attachments : undefined,
     });
   };
@@ -294,19 +298,12 @@ export const ProjectForm = () => {
 
           <div className="flex gap-x-2 items-end justify-between pt-3">
             <div className="flex items-center gap-3">
-              <div style={{ fontSize: "11px", color: "rgba(200,200,200,0.6)", fontFamily: "monospace" }}>
-                <kbd
-                  style={{
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    background: "rgba(80,80,80,0.3)",
-                    borderRadius: "6px",
-                    padding: "2px 5px",
-                  }}
-                >
-                  ⌘ Enter
-                </kbd>{" "}
-                to submit
-              </div>
+              {/* Project Type Selector - NEW */}
+              <ProjectTypeSelector
+                value={projectType}
+                onChange={setProjectType}
+                disabled={isPending}
+              />
 
               {/* File Upload Dropdown */}
               <DropdownMenu>

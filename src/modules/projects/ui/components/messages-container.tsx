@@ -9,12 +9,14 @@ import { MessageLoading } from "./message-loading";
 
 interface Props {
     projectId: string;
+    projectType: "web" | "mobile"; // NEW: Add projectType
     activeFragment: Fragment | null;
     setActiveFragment: (fragment: Fragment | null) => void; 
 }
 
-export const MessagesContainer= ({ 
+export const MessagesContainer = ({ 
     projectId,
+    projectType, // NEW: Receive projectType
     activeFragment,
     setActiveFragment
 }: Props) => {
@@ -22,7 +24,7 @@ export const MessagesContainer= ({
     const bottomRef = useRef<HTMLDivElement>(null); 
     const lastAssistantMessageIdRef = useRef<string | null>(null);
 
-    const { data:  messages } = useSuspenseQuery(trpc.messages.getMany.queryOptions({
+    const { data: messages } = useSuspenseQuery(trpc.messages.getMany.queryOptions({
         projectId: projectId,
     }, {
         // Todo temporary live message update
@@ -64,7 +66,7 @@ export const MessagesContainer= ({
                           isActiveFragment={activeFragment?.id === message.fragment?.id}
                           onFragmentClick={() => setActiveFragment(message.fragment)}
                           type={message.type}
-                          attachments={message.attachments as Array<{url: string; name: string; size: number; type: string}> | undefined} // NEW: Pass attachments
+                          attachments={message.attachments as Array<{url: string; name: string; size: number; type: string}> | undefined}
                     />
                     ))}
                     {isLastMessageUser && <MessageLoading />}
@@ -72,9 +74,12 @@ export const MessagesContainer= ({
                 </div>
             </div>
             <div className="relative p-3 pt-1">
-                <div className="absolute -top-6 left-0 right-0 h-6 bg-gradient-to-b from-transparent to-background pointer-events-none"/>
-                <MessageForm projectId={projectId} /> 
+                <div className="absolute -top-6 left-0 right-0 h-6 bg-linear-to-b from-transparent to-background pointer-events-none"/>
+                <MessageForm 
+                    projectId={projectId}
+                    projectType={projectType}
+                /> 
             </div>
         </div>
-    )
+    );
 };
