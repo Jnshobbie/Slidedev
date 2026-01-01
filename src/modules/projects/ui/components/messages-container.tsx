@@ -16,7 +16,7 @@ interface Props {
 
 export const MessagesContainer = ({ 
     projectId,
-    projectType, // NEW: Receive projectType
+   
     activeFragment,
     setActiveFragment
 }: Props) => {
@@ -77,7 +77,6 @@ export const MessagesContainer = ({
                 <div className="absolute -top-6 left-0 right-0 h-6 bg-linear-to-b from-transparent to-background pointer-events-none"/>
                 <MessageForm 
                     projectId={projectId}
-                    projectType={projectType}
                 /> 
             </div>
         </div>
