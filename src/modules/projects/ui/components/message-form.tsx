@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */ 
 
 import { z } from "zod";
 import { toast } from "sonner";
