@@ -34,6 +34,13 @@ export function FragmentMobile({ data }: Props) {
       : {};
   }, [data.files]);
 
+  // Extract dependencies from fragment
+  const dependencies = useMemo(() => {
+    return data.dependencies && typeof data.dependencies === 'object'
+      ? (data.dependencies as Record<string, string>)
+      : {};
+  }, [data.dependencies]);
+
   // Get App.tsx content
   const appCode = useMemo(() => {
     return files['App.tsx'] || files['App.js'] || '';
@@ -58,6 +65,7 @@ export function FragmentMobile({ data }: Props) {
           body: JSON.stringify({
             files,
             name: data.title || 'Mobile App',
+            dependencies, // ← Pass AI-generated dependencies
           }),
         });
 
@@ -194,7 +202,7 @@ export function FragmentMobile({ data }: Props) {
       {/* Info Footer */}
       <div className="px-4 py-2 border-t border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
         <p className="text-xs text-zinc-500">
-          Powered by Expo Snack
+          
         </p>
         <div className="flex items-center gap-2 text-xs text-zinc-500">
           <QrCode className="size-3" />

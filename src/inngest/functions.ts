@@ -14,6 +14,29 @@ interface AgentState {
   files: { [path: string]: string }; 
 }
 
+/**
+ * Extracts dependencies from AI output
+ * Looks for <required_dependencies>...</required_dependencies> tags
+ */
+function extractDependencies(summary: string): Record<string, string> {
+  try {
+    const match = summary.match(/<required_dependencies>([\s\S]*?)<\/required_dependencies>/);
+    if (!match) {
+      console.log('⚠️ No dependencies found in summary');
+      return {};
+    }
+    
+    const depsJson = match[1].trim();
+    const dependencies = JSON.parse(depsJson);
+    
+    console.log('📦 Extracted dependencies:', dependencies);
+    return dependencies;
+  } catch (error) {
+    console.error('❌ Failed to parse dependencies:', error);
+    return {};
+  }
+}
+
 export const codeAgentFunction = inngest.createFunction(
   { id: "code-agent" },
   { event: "code-agent/run" },
@@ -299,6 +322,10 @@ export const codeAgentFunction = inngest.createFunction(
           }, 
         });
       }
+      
+      // Extract dependencies from summary (for mobile projects)
+      const dependencies = isMobile ? extractDependencies(result.state.data.summary) : null;
+      
       return await prisma.message.create({
         data: {
           projectId: event.data.projectId,
@@ -309,7 +336,8 @@ export const codeAgentFunction = inngest.createFunction(
             create: {
               sandboxUrl: sandboxUrl,
               title: parseAgentOutput(fragmentTitleOutput),
-              files: result.state.data.files, 
+              files: result.state.data.files,
+              dependencies: dependencies || undefined, // NEW: Save dependencies
             }
           }
         },

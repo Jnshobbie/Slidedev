@@ -1,14 +1,15 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @next/next/no-img-element */ 
 
 import { z } from "zod";
 import { toast } from "sonner";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod"; 
 import TextareaAutosize from "react-textarea-autosize"; 
 import { ArrowUpIcon, Loader2Icon, PlusIcon, XIcon, ImageIcon, VideoIcon, FileTextIcon } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"; 
+import Image from "next/image";
 
 import { cn } from "@/lib/utils"; 
 import { useTRPC } from "@/trpc/client";
@@ -16,7 +17,6 @@ import { Form, FormField } from "@/components/ui/form";
 import { Usage } from "./usage";
 import { useRouter } from "next/navigation";
 import { useUploadThing } from "@/lib/uploadthing";
-import { ProjectTypeSelector, type ProjectType } from "@/components/project-type-selector";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +26,6 @@ import {
 
 interface Props {
     projectId: string;
-    projectType: ProjectType; // NEW: Pass this from parent
 }
 
 const formSchema = z.object({
@@ -42,7 +41,7 @@ interface FileAttachment {
   type: string;
 }
 
-export const MessageForm = ({ projectId, projectType: initialProjectType }: Props) => {
+export const MessageForm = ({ projectId }: Props) => {
     
     const trpc = useTRPC();
     const router = useRouter();
@@ -51,7 +50,6 @@ export const MessageForm = ({ projectId, projectType: initialProjectType }: Prop
     const { data: usage } = useQuery(trpc.usage.status.queryOptions());
     const [attachments, setAttachments] = useState<FileAttachment[]>([]);
     const [isUploading, setIsUploading] = useState(false);
-    const [projectType, setProjectType] = useState<ProjectType>(initialProjectType);
 
     const { startUpload } = useUploadThing("messageAttachment");
 
@@ -92,21 +90,16 @@ export const MessageForm = ({ projectId, projectType: initialProjectType }: Prop
         try {
             const uploadedFiles = await startUpload(files);
             
-            if (uploadedFiles && uploadedFiles.length > 0) {
-                const newAttachments: FileAttachment[] = uploadedFiles.map((uploadedFile, index) => {
-                    const originalFile = files[index];
-                    return {
-                        url: uploadedFile.url,
-                        name: originalFile.name,
-                        size: originalFile.size,
-                        type: originalFile.type || uploadedFile.type || 'application/octet-stream',
-                    };
-                });
+            if (uploadedFiles) {
+                const newAttachments: FileAttachment[] = uploadedFiles.map((file, index) => ({
+                    url: file.url,
+                    name: files[index].name,
+                    size: files[index].size,
+                    type: files[index].type,
+                }));
                 
                 setAttachments(prev => [...prev, ...newAttachments]);
                 toast.success(`${files.length} file(s) uploaded successfully`, { id: "upload" });
-            } else {
-                toast.error("Upload failed - no files returned", { id: "upload" });
             }
         } catch (error) {
             console.error("Upload error:", error);
@@ -114,19 +107,6 @@ export const MessageForm = ({ projectId, projectType: initialProjectType }: Prop
         } finally {
             setIsUploading(false);
             e.target.value = "";
-        }
-    };
-
-    const fileInputRefs = {
-        image: useRef<HTMLInputElement>(null),
-        video: useRef<HTMLInputElement>(null),
-        pdf: useRef<HTMLInputElement>(null),
-    };
-
-    const triggerFileInput = (type: 'image' | 'video' | 'pdf') => {
-        const input = fileInputRefs[type].current;
-        if (input) {
-            input.click();
         }
     };
 
@@ -139,7 +119,6 @@ export const MessageForm = ({ projectId, projectType: initialProjectType }: Prop
         await createMessage.mutateAsync({
             value: values.value,
             projectId,
-            projectType, // NEW: Send project type with message
             attachments: attachments.length > 0 ? attachments : undefined,
         });
     };
@@ -171,27 +150,24 @@ export const MessageForm = ({ projectId, projectType: initialProjectType }: Prop
             {attachments.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2 p-2 rounded-md bg-muted/50">
                     {attachments.map((file, index) => {
-                        const isImage = file.type?.startsWith('image/') ?? false;
-                        const isVideo = file.type?.startsWith('video/') ?? false;
+                        const isImage = file.type.startsWith('image/');
+                        const isVideo = file.type.startsWith('video/');
                         
                         return (
                             <div key={index} className="relative group">
                                 {isImage ? (
                                     <div className="relative">
-                                        <img
+                                        <Image
                                             src={file.url}
                                             alt={file.name}
+                                            width={80}
+                                            height={80}
                                             className="rounded-md object-cover h-20 w-20"
-                                            onError={(e) => {
-                                                console.error("Image load error:", file.url);
-                                                const target = e.target as HTMLImageElement;
-                                                target.style.display = 'none';
-                                            }}
                                         />
                                         <button
                                             type="button"
                                             onClick={() => removeAttachment(index)}
-                                            className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                            className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
                                             <XIcon className="size-3" />
                                         </button>
@@ -239,12 +215,13 @@ export const MessageForm = ({ projectId, projectType: initialProjectType }: Prop
             />
             <div className="flex gap-x-2 items-center justify-between pt-2 mt-1 border-t no-border-dark">
                 <div className="flex items-center gap-2">
-                    {/* Project Type Selector - NEW */}
-                    <ProjectTypeSelector
-                      value={projectType}
-                      onChange={setProjectType}
-                      disabled={isPending}
-                    />
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                       <kbd className="inline-flex h-5 select-none items-center gap-0.5 rounded px-1.5 font-mono text-[10px] font-medium text-muted-foreground border no-border-dark bg-muted shadow-sm dark:shadow-none">
+                        <span className="text-xs">{"\u2318"}</span>
+                        <span>Enter</span>
+                       </kbd>
+                       <span>to submit</span>
+                    </div>
 
                     {/* File Upload Dropdown */}
                     <DropdownMenu>
@@ -266,59 +243,47 @@ export const MessageForm = ({ projectId, projectType: initialProjectType }: Prop
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-56">
-                            <input
-                                ref={fileInputRefs.image}
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                onChange={handleFileSelect}
-                                disabled={isUploading || isPending}
-                                className="hidden"
-                            />
-                            <input
-                                ref={fileInputRefs.video}
-                                type="file"
-                                accept="video/*"
-                                multiple
-                                onChange={handleFileSelect}
-                                disabled={isUploading || isPending}
-                                className="hidden"
-                            />
-                            <input
-                                ref={fileInputRefs.pdf}
-                                type="file"
-                                accept=".pdf"
-                                multiple
-                                onChange={handleFileSelect}
-                                disabled={isUploading || isPending}
-                                className="hidden"
-                            />
-                            <DropdownMenuItem 
-                                onSelect={(e) => {
-                                    e.preventDefault();
-                                    triggerFileInput('image');
-                                }}
-                            >
-                                <ImageIcon className="size-4" />
-                                <span>Upload Images</span>
+                            <DropdownMenuItem asChild>
+                                <label className="cursor-pointer flex items-center gap-2">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        onChange={handleFileSelect}
+                                        disabled={isUploading || isPending}
+                                        className="hidden"
+                                    />
+                                    <ImageIcon className="size-4" />
+                                    <span>Upload Images</span>
+                                </label>
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
-                                onSelect={(e) => {
-                                    e.preventDefault();
-                                    triggerFileInput('video');
-                                }}
-                            >
-                                <VideoIcon className="size-4" />
-                                <span>Upload Videos</span>
+                            <DropdownMenuItem asChild>
+                                <label className="cursor-pointer flex items-center gap-2">
+                                    <input
+                                        type="file"
+                                        accept="video/*"
+                                        multiple
+                                        onChange={handleFileSelect}
+                                        disabled={isUploading || isPending}
+                                        className="hidden"
+                                    />
+                                    <VideoIcon className="size-4" />
+                                    <span>Upload Videos</span>
+                                </label>
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
-                                onSelect={(e) => {
-                                    e.preventDefault();
-                                    triggerFileInput('pdf');
-                                }}
-                            >
-                                <FileTextIcon className="size-4" />
-                                <span>Upload PDFs</span>
+                            <DropdownMenuItem asChild>
+                                <label className="cursor-pointer flex items-center gap-2">
+                                    <input
+                                        type="file"
+                                        accept=".pdf"
+                                        multiple
+                                        onChange={handleFileSelect}
+                                        disabled={isUploading || isPending}
+                                        className="hidden"
+                                    />
+                                    <FileTextIcon className="size-4" />
+                                    <span>Upload PDFs</span>
+                                </label>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

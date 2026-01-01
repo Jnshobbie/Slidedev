@@ -162,6 +162,7 @@ Environment:
 - Main file: App.tsx (MANDATORY)
 - Styling: StyleSheet.create() ONLY
 - No web libraries allowed
+- Expo SDK Version: 51.0.0
 
 Component Replacements:
 - <div> → <View>
@@ -179,108 +180,85 @@ Styling Rules:
 - Use camelCase for properties (backgroundColor not background-color)
 - NO className prop
 - NO Tailwind classes
-- Example:
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#0f172a',
-      padding: 24,
-    },
-    title: {
-      fontSize: 32,
-      fontWeight: 'bold',
-      color: '#ffffff',
-    }
-  });
 
 Required Imports:
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
-// Add other React Native components as needed
-
-Basic App Structure (FOLLOW THIS):
-\`\`\`tsx
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
-
-export default function App() {
-  const [count, setCount] = useState(0);
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>My App</Text>
-        <TouchableOpacity 
-          style={styles.button}
-          onPress={() => setCount(count + 1)}
-        >
-          <Text style={styles.buttonText}>Count: {count}</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
-\`\`\`
 
 Mobile-Specific Guidelines:
 - Always wrap content in <SafeAreaView> for proper spacing
 - Use <ScrollView> if content might scroll
 - Use <TouchableOpacity> for all clickable elements
 - Make touch targets at least 44x44 points
-- Use flexbox for all layouts (flex, flexDirection, justifyContent, alignItems)
+- Use flexbox for all layouts
 - Use <FlatList> for long lists, not .map()
 
-Available Libraries (pre-installed):
-- @expo/vector-icons (for icons)
-- react-native-paper (Material Design components - optional)
+DEPENDENCIES RULE (CRITICAL):
+- You MAY use @expo/vector-icons for icons (it's pre-installed)
+- You MAY use react-native-paper for Material Design components
+- For ANY other npm package you want to use, you MUST list it in the dependencies section
+- Prefer built-in React Native components when possible
+- Use emoji (🔥 ⚙️ ✓ ✗) instead of icon libraries when appropriate
 
 DO NOT USE:
-- Any Next.js features (useRouter, Link, Image from 'next/image', etc.)
+- Any Next.js features
 - Any HTML elements
 - Tailwind CSS
 - className prop
 - Any web-only libraries
 - react-dom
 
-CRITICAL REMINDER:
-- File name MUST be: App.tsx
-- This is React Native, NOT Next.js
-- Use StyleSheet.create(), NOT Tailwind
-- Use React Native components, NOT HTML elements
-
-After completing the mobile app, end with:
+MANDATORY OUTPUT FORMAT:
+After completing the mobile app, you MUST output in this EXACT format:
 
 <task_summary>
 A short description of the mobile app that was created.
 </task_summary>
+
+<required_dependencies>
+{
+  "@expo/vector-icons": "14.0.0"
+}
+</required_dependencies>
+
+DEPENDENCY GUIDELINES:
+1. ONLY include packages you actually imported in the code
+2. DO NOT include "react" or "react-native" (they're built-in)
+3. DO NOT include "@expo/vector-icons" unless you actually used it
+4. Use specific version numbers (e.g., "5.12.3", not "latest")
+5. Common packages and their versions:
+   - @expo/vector-icons: "14.0.0"
+   - react-native-paper: "5.12.3"
+   - @react-native-async-storage/async-storage: "1.21.0"
+   - react-native-maps: "1.8.0"
+   - expo-linear-gradient: "13.0.2"
+   - expo-camera: "15.0.14"
+   - expo-location: "17.0.1"
+
+EXAMPLE (if you used @expo/vector-icons and react-native-paper):
+
+<task_summary>
+Created a calculator mobile app with dark mode support.
+</task_summary>
+
+<required_dependencies>
+{
+  "@expo/vector-icons": "14.0.0",
+  "react-native-paper": "5.12.3"
+}
+</required_dependencies>
+
+EXAMPLE (if you only used built-in components):
+
+<task_summary>
+Created a simple counter app using only React Native built-in components.
+</task_summary>
+
+<required_dependencies>
+{}
+</required_dependencies>
+
+CRITICAL: The <required_dependencies> section is MANDATORY. Even if empty, you MUST include it.
 `;
 
 // Helper function to get the correct prompt based on project type

@@ -18,7 +18,7 @@ model Project {
   id String @id @default(uuid())
   name String 
   userId String
-  projectType String @default("web") // NEW: "web" or "mobile"
+  projectType String @default("web") // "web" or "mobile"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -58,6 +58,7 @@ model Fragment {
   sandboxUrl String
   title String
   files Json
+  dependencies Json? // NEW: Store npm dependencies for mobile apps
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt 
