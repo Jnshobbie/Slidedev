@@ -26,13 +26,13 @@ export function ProjectTypeSelector({
   const options = [
     {
       value: "web" as const,
-      label: "Sonnet 4.5",
-      subtitle: "Best for everyday tasks",
+      label: "Web",
+      subtitle: "for web development",
     },
     {
       value: "mobile" as const,
-      label: "Haiku 4.5",
-      subtitle: "Fastest for quick answers",
+      label: "Mobile",
+      subtitle: "for mobile development",
     },
   ];
 
@@ -93,7 +93,7 @@ export function ProjectTypeSelector({
         })}
         <div className="px-3 py-2 border-t border-border">
           <button className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-            More models
+            Choose one
             <ChevronDown className="size-3" />
           </button>
         </div>
