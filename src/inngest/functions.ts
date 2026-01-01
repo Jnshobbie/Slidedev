@@ -75,11 +75,46 @@ export const codeAgentFunction = inngest.createFunction(
       });
 
       for (const message of messages) {
-        formattedMessages.push({
-          type: "text",
-          role: message.role === "ASSISTANT" ? "assistant" : "user",
-          content: message.content,
-        })
+        // Parse attachments from JSON
+        const attachments = message.attachments as Array<{
+          url: string;
+          name: string;
+          size: number;
+          type: string;
+        }> | null;
+
+        // Filter for images only
+        const imageUrls = attachments?.filter(a => a.type.startsWith('image/')).map(a => a.url) || [];
+
+        if (imageUrls.length > 0) {
+          // Message with images - format for GPT-4 vision
+          console.log(`📸 Message ${message.id} has ${imageUrls.length} image(s)`);
+          
+          formattedMessages.push({
+            type: "text",
+            role: message.role === "ASSISTANT" ? "assistant" : "user",
+            content: [
+              { 
+                type: "text", 
+                text: message.content 
+              },
+              ...imageUrls.map(url => ({
+                type: "image_url" as const,
+                image_url: { 
+                  url,
+                  detail: "high" as const // Use "high" for better image analysis
+                }
+              }))
+            ]
+          } as Message);
+        } else {
+          // Regular text message (no images)
+          formattedMessages.push({
+            type: "text",
+            role: message.role === "ASSISTANT" ? "assistant" : "user",
+            content: message.content,
+          });
+        }
       }
 
       return formattedMessages.reverse();
@@ -105,7 +140,7 @@ export const codeAgentFunction = inngest.createFunction(
       description: isMobile ? "An expert mobile app coding agent" : "An expert coding agent",
       system: systemPrompt,
       model: openai({ 
-        model: "gpt-4.1",
+        model: "gpt-4o", // Changed from gpt-4.1 to support vision
         defaultParameters: {
           temperature: 0.1, 
         }, 
