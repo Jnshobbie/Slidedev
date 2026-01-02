@@ -138,9 +138,9 @@ export function FragmentMobile({ data }: Props) {
   }
 
   return (
-    <div className="flex flex-col w-full h-full bg-zinc-950">
+    <div className="flex flex-col w-full h-full" style={{ backgroundColor: '#1a1a1a' }}>
       {/* Header */}
-      <div className="px-3 py-2.5 flex items-center gap-2 border-b border-zinc-800 bg-zinc-900">
+      <div className="px-3 py-2.5 flex items-center gap-2 border-b border-zinc-800" style={{ backgroundColor: '#1a1a1a' }}>
         <Hint text="Refresh Preview" side="bottom" align="start">
           <button
             onClick={onRefresh}
@@ -215,7 +215,7 @@ export function FragmentMobile({ data }: Props) {
       </div>
 
       {/* Info Footer */}
-      <div className="px-4 py-2 border-t border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
+      <div className="px-4 py-2 border-t border-zinc-800 flex items-center justify-between" style={{ backgroundColor: '#1a1a1a' }}>
         <p className="text-xs text-zinc-500">
           
         </p>
