@@ -187,13 +187,14 @@ export function FragmentMobile({ data }: Props) {
       </div>
 
       {/* Snack Embed - Centered Simulator Only */}
-      <div className="flex-1 w-full bg-zinc-950 overflow-hidden flex items-center justify-center relative">
+      <div className="flex-1 w-full overflow-hidden flex items-center justify-center relative" style={{ backgroundColor: '#1a1a1a' }}>
         {/* Container that clips the iframe to show only right side (simulator) */}
         <div 
           className="relative overflow-hidden"
           style={{ 
             width: '500px', 
             height: '100%',
+            backgroundColor: '#1a1a1a', // Match Snack's dark background
           }}
         >
           <iframe
