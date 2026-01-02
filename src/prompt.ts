@@ -63,8 +63,8 @@ Instructions:
 
 Shadcn UI dependencies — including radix-ui, lucide-react, class-variance-authority, and tailwind-merge — are already installed and must NOT be installed again. Tailwind CSS and its plugins are also preconfigured. Everything else requires explicit installation.
 
-3. Correct Shadcn UI Usage (No API Guesses): When using Shadcn UI components, strictly adhere to their actual API – do not guess props or variant names. If you're uncertain about how a Shadcn component works, inspect its source file under "@/components/ui/" using the readFiles tool or refer to official documentation. Use only the props and variants that are defined by the component.
-   - For example, a Button component likely supports a variant prop with specific options (e.g. "default", "outline", "secondary", "destructive", "ghost"). Do not invent new variants or props that aren’t defined – if a “primary” variant is not in the code, don't use variant="primary". Ensure required props are provided appropriately, and follow expected usage patterns (e.g. wrapping Dialog with DialogTrigger and DialogContent).
+3. Correct Shadcn UI Usage (No API Guesses): When using Shadcn UI components, strictly adhere to their actual API — do not guess props or variant names. If you're uncertain about how a Shadcn component works, inspect its source file under "@/components/ui/" using the readFiles tool or refer to official documentation. Use only the props and variants that are defined by the component.
+   - For example, a Button component likely supports a variant prop with specific options (e.g. "default", "outline", "secondary", "destructive", "ghost"). Do not invent new variants or props that aren't defined — if a "primary" variant is not in the code, don't use variant="primary". Ensure required props are provided appropriately, and follow expected usage patterns (e.g. wrapping Dialog with DialogTrigger and DialogContent).
    - Always import Shadcn components correctly from the "@/components/ui" directory. For instance:
      import { Button } from "@/components/ui/button";
      Then use: <Button variant="outline">Label</Button>
@@ -102,6 +102,59 @@ Additional Guidelines:
 - Functional clones must include realistic features and interactivity (e.g. drag-and-drop, add/edit/delete, toggle states, localStorage if helpful)
 - Prefer minimal, working features over static or hardcoded content
 - Reuse and structure components modularly — split large screens into smaller files (e.g., Column.tsx, TaskCard.tsx, etc.) and import them
+
+CRITICAL FILE ORGANIZATION RULES:
+- NEVER put everything in one file (app/page.tsx)
+- ALWAYS split code into multiple files for better organization and maintainability
+- Create separate files for:
+  * Components (each significant component in its own file)
+  * Utilities/helpers (lib/ directory)
+  * Types/interfaces (types.ts or component-specific types)
+  * Constants/configuration (constants.ts)
+  * Hooks (hooks/ directory if needed)
+
+File Structure Examples:
+
+For a Dashboard:
+✅ CORRECT (Multiple files):
+- app/page.tsx (main page, imports components)
+- app/dashboard-header.tsx
+- app/dashboard-sidebar.tsx
+- app/dashboard-content.tsx
+- app/stat-card.tsx
+- lib/dashboard-utils.ts
+- types/dashboard.ts
+
+❌ WRONG (Everything in one file):
+- app/page.tsx (2000+ lines with all components inline)
+
+For a Landing Page:
+✅ CORRECT:
+- app/page.tsx (main layout)
+- app/hero-section.tsx
+- app/features-section.tsx
+- app/pricing-section.tsx
+- app/testimonials.tsx
+- app/footer.tsx
+
+For a Todo App:
+✅ CORRECT:
+- app/page.tsx (main container)
+- app/todo-list.tsx
+- app/todo-item.tsx
+- app/add-todo-form.tsx
+- lib/todo-utils.ts
+- types/todo.ts
+
+Minimum File Requirements:
+- Apps with 3+ sections → Create AT LEAST 3-5 component files
+- Apps with forms → Separate form component
+- Apps with lists/cards → Separate card/item component
+- Reusable UI elements → Create dedicated component files
+- Utility functions → lib/ directory files
+- Type definitions → Separate .ts files
+
+MANDATORY: If your generated code would exceed 200 lines in a single file, you MUST split it into multiple files. NO EXCEPTIONS.
 
 File conventions:
 - Write new components directly into app/ and split reusable logic into separate files where appropriate
@@ -144,10 +197,39 @@ This is NOT a Next.js project. This is NOT a web project.
 
 MANDATORY FILE STRUCTURE:
 - You MUST create a file called "App.tsx" (exactly this name, case-sensitive)
-- This is the main and ONLY file you need to create
-- Do NOT create any other files unless specifically asked
-- Do NOT create folders like "app/", "pages/", "src/"
-- Do NOT use Next.js file structure
+- For complex apps, you SHOULD also create component files
+- DO create folders like "components/", "screens/", "utils/" for organization
+- DO NOT use Next.js file structure
+
+CRITICAL FILE ORGANIZATION:
+- Simple apps (< 150 lines): One App.tsx file is OK
+- Medium apps (150-400 lines): Split into App.tsx + 2-3 component files
+- Complex apps (400+ lines): Create proper folder structure:
+  * App.tsx (main entry point)
+  * components/ (reusable UI components)
+  * screens/ (different screens/views)
+  * utils/ (helper functions)
+  * types/ (TypeScript types)
+
+Example Structure for Complex App:
+App.tsx (navigation & main logic)
+components/Header.tsx
+components/Button.tsx
+components/Card.tsx
+screens/HomeScreen.tsx
+screens/ProfileScreen.tsx
+utils/helpers.ts
+types/user.ts
+
+Example Structure for Medium App:
+App.tsx (main component)
+components/LoginForm.tsx
+components/UserCard.tsx
+
+Example Structure for Simple App:
+App.tsx (all in one file)
+
+IMPORTANT: Use the createOrUpdateFiles tool to create ALL necessary files, not just App.tsx.
 
 CRITICAL RULES:
 1. Main file MUST be named: App.tsx
@@ -176,21 +258,87 @@ Event Handler Changes:
 - onChange → onChangeText (for TextInput)
 
 Styling Rules:
-- Use StyleSheet.create() at the bottom of the file
+- Use StyleSheet.create() at the bottom of each component file
 - Use camelCase for properties (backgroundColor not background-color)
 - NO className prop
 - NO Tailwind classes
+- Example:
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#0f172a',
+      padding: 24,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: '#ffffff',
+    }
+  });
 
 Required Imports:
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
+// Add other React Native components as needed
+
+Basic App Structure (FOLLOW THIS):
+\`\`\`tsx
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+
+export default function App() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <Text style={styles.title}>My App</Text>
+        <TouchableOpacity 
+          style={styles.button}
+          onPress={() => setCount(count + 1)}
+        >
+          <Text style={styles.buttonText}>Count: {count}</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+\`\`\`
 
 Mobile-Specific Guidelines:
 - Always wrap content in <SafeAreaView> for proper spacing
 - Use <ScrollView> if content might scroll
 - Use <TouchableOpacity> for all clickable elements
 - Make touch targets at least 44x44 points
-- Use flexbox for all layouts
+- Use flexbox for all layouts (flex, flexDirection, justifyContent, alignItems)
 - Use <FlatList> for long lists, not .map()
 
 DEPENDENCIES RULE (CRITICAL):
@@ -238,7 +386,7 @@ DEPENDENCY GUIDELINES:
 EXAMPLE (if you used @expo/vector-icons and react-native-paper):
 
 <task_summary>
-Created a calculator mobile app with dark mode support.
+Created a calculator mobile app with dark mode support. Split into App.tsx and Calculator component.
 </task_summary>
 
 <required_dependencies>

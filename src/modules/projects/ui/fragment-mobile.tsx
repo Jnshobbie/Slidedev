@@ -186,17 +186,23 @@ export function FragmentMobile({ data }: Props) {
         </Hint>
       </div>
 
-      {/* Snack Embed - Full Size */}
-      <div className="flex-1 w-full bg-zinc-950 overflow-hidden">
-        <iframe
-          key={fragmentKey}
-          src={snackData.embedUrl}
-          className="w-full h-full"
-          sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
-          allow="clipboard-write; clipboard-read"
-          style={{ border: 'none' }}
-          title="Expo Snack Mobile Preview"
-        />
+      {/* Snack Embed - Centered Preview Only */}
+      <div className="flex-1 w-full bg-zinc-950 overflow-hidden flex items-center justify-center">
+        <div className="relative" style={{ width: '500px', height: '100%', overflow: 'hidden' }}>
+          <iframe
+            key={fragmentKey}
+            src={snackData.embedUrl}
+            style={{ 
+              border: 'none',
+              width: '1400px',
+              height: '100%',
+              marginLeft: '-450px', // Shift to show preview section
+            }}
+            sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
+            allow="clipboard-write; clipboard-read"
+            title="Expo Snack Mobile Preview"
+          />
+        </div>
       </div>
 
       {/* Info Footer */}

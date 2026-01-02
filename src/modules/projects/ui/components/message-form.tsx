@@ -1,8 +1,9 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { z } from "zod";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod"; 
 import TextareaAutosize from "react-textarea-autosize"; 
@@ -52,6 +53,13 @@ export const MessageForm = ({ projectId }: Props) => {
 
     const { startUpload } = useUploadThing("messageAttachment");
 
+    // File input refs - CRITICAL for upload to work
+    const fileInputRefs = {
+        image: useRef<HTMLInputElement>(null),
+        video: useRef<HTMLInputElement>(null),
+        pdf: useRef<HTMLInputElement>(null),
+    };
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -81,31 +89,60 @@ export const MessageForm = ({ projectId }: Props) => {
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
-        if (files.length === 0) return;
+        console.log("🎯 handleFileSelect called with files:", files.length);
+        if (files.length === 0) {
+            console.log("⚠️ No files selected");
+            return;
+        }
 
+        console.log("📤 Starting upload for files:", files.map(f => ({ name: f.name, type: f.type, size: f.size })));
         setIsUploading(true);
         toast.loading(`Uploading ${files.length} file(s)...`, { id: "upload" });
         
         try {
             const uploadedFiles = await startUpload(files);
+            console.log("✅ Upload complete:", uploadedFiles);
             
-            if (uploadedFiles) {
-                const newAttachments: FileAttachment[] = uploadedFiles.map((file, index) => ({
-                    url: file.url,
-                    name: files[index].name,
-                    size: files[index].size,
-                    type: files[index].type,
-                }));
+            if (uploadedFiles && uploadedFiles.length > 0) {
+                const newAttachments: FileAttachment[] = uploadedFiles.map((uploadedFile, index) => {
+                    const originalFile = files[index];
+                    const attachment = {
+                        url: uploadedFile.url,
+                        name: originalFile.name,
+                        size: originalFile.size,
+                        type: originalFile.type || uploadedFile.type || 'application/octet-stream',
+                    };
+                    console.log(`🔎 Creating attachment [${index}]:`, attachment);
+                    return attachment;
+                });
                 
-                setAttachments(prev => [...prev, ...newAttachments]);
+                console.log("🔎 New attachments array:", newAttachments);
+                setAttachments(prev => {
+                    const updated = [...prev, ...newAttachments];
+                    console.log("📋 Updated attachments state:", updated);
+                    return updated;
+                });
                 toast.success(`${files.length} file(s) uploaded successfully`, { id: "upload" });
+            } else {
+                console.error("❌ No files returned from upload");
+                toast.error("Upload failed - no files returned", { id: "upload" });
             }
         } catch (error) {
-            console.error("Upload error:", error);
+            console.error("❌ Upload error:", error);
             toast.error("Failed to upload files", { id: "upload" });
         } finally {
             setIsUploading(false);
             e.target.value = "";
+        }
+    };
+
+    const triggerFileInput = (type: 'image' | 'video' | 'pdf') => {
+        console.log("🖱️ Triggering file input for type:", type);
+        const input = fileInputRefs[type].current;
+        if (input) {
+            input.click();
+        } else {
+            console.error("❌ File input ref not found for type:", type);
         }
     };
 
@@ -156,11 +193,9 @@ export const MessageForm = ({ projectId }: Props) => {
                             <div key={index} className="relative group">
                                 {isImage ? (
                                     <div className="relative">
-                                        <Image
+                                        <img
                                             src={file.url}
                                             alt={file.name}
-                                            width={80}
-                                            height={80}
                                             className="rounded-md object-cover h-20 w-20"
                                         />
                                         <button
@@ -222,6 +257,35 @@ export const MessageForm = ({ projectId }: Props) => {
                        <span>to submit</span>
                     </div>
 
+                    {/* Hidden file inputs */}
+                    <input
+                        ref={fileInputRefs.image}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleFileSelect}
+                        disabled={isUploading || isPending}
+                        className="hidden"
+                    />
+                    <input
+                        ref={fileInputRefs.video}
+                        type="file"
+                        accept="video/*"
+                        multiple
+                        onChange={handleFileSelect}
+                        disabled={isUploading || isPending}
+                        className="hidden"
+                    />
+                    <input
+                        ref={fileInputRefs.pdf}
+                        type="file"
+                        accept=".pdf"
+                        multiple
+                        onChange={handleFileSelect}
+                        disabled={isUploading || isPending}
+                        className="hidden"
+                    />
+
                     {/* File Upload Dropdown */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -242,47 +306,32 @@ export const MessageForm = ({ projectId }: Props) => {
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-56">
-                            <DropdownMenuItem asChild>
-                                <label className="cursor-pointer flex items-center gap-2">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        onChange={handleFileSelect}
-                                        disabled={isUploading || isPending}
-                                        className="hidden"
-                                    />
-                                    <ImageIcon className="size-4" />
-                                    <span>Upload Images</span>
-                                </label>
+                            <DropdownMenuItem 
+                                onSelect={(e) => {
+                                    e.preventDefault();
+                                    triggerFileInput('image');
+                                }}
+                            >
+                                <ImageIcon className="size-4" />
+                                <span>Upload Images</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <label className="cursor-pointer flex items-center gap-2">
-                                    <input
-                                        type="file"
-                                        accept="video/*"
-                                        multiple
-                                        onChange={handleFileSelect}
-                                        disabled={isUploading || isPending}
-                                        className="hidden"
-                                    />
-                                    <VideoIcon className="size-4" />
-                                    <span>Upload Videos</span>
-                                </label>
+                            <DropdownMenuItem 
+                                onSelect={(e) => {
+                                    e.preventDefault();
+                                    triggerFileInput('video');
+                                }}
+                            >
+                                <VideoIcon className="size-4" />
+                                <span>Upload Videos</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <label className="cursor-pointer flex items-center gap-2">
-                                    <input
-                                        type="file"
-                                        accept=".pdf"
-                                        multiple
-                                        onChange={handleFileSelect}
-                                        disabled={isUploading || isPending}
-                                        className="hidden"
-                                    />
-                                    <FileTextIcon className="size-4" />
-                                    <span>Upload PDFs</span>
-                                </label>
+                            <DropdownMenuItem 
+                                onSelect={(e) => {
+                                    e.preventDefault();
+                                    triggerFileInput('pdf');
+                                }}
+                            >
+                                <FileTextIcon className="size-4" />
+                                <span>Upload PDFs</span>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
