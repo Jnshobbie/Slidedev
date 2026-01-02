@@ -186,17 +186,25 @@ export function FragmentMobile({ data }: Props) {
         </Hint>
       </div>
 
-      {/* Snack Embed - Centered Preview Only */}
-      <div className="flex-1 w-full bg-zinc-950 overflow-hidden flex items-center justify-center">
-        <div className="relative" style={{ width: '500px', height: '100%', overflow: 'hidden' }}>
+      {/* Snack Embed - Centered Simulator Only */}
+      <div className="flex-1 w-full bg-zinc-950 overflow-hidden flex items-center justify-center relative">
+        {/* Container that clips the iframe to show only right side (simulator) */}
+        <div 
+          className="relative overflow-hidden"
+          style={{ 
+            width: '500px', 
+            height: '100%',
+          }}
+        >
           <iframe
             key={fragmentKey}
             src={snackData.embedUrl}
             style={{ 
               border: 'none',
-              width: '1400px',
+              width: '1600px', // Make iframe wider than container
               height: '100%',
-              marginLeft: '-450px', // Shift to show preview section
+              marginLeft: '-1100px', // Shift left to hide editor, show simulator
+              transform: 'scale(1)',
             }}
             sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
             allow="clipboard-write; clipboard-read"
