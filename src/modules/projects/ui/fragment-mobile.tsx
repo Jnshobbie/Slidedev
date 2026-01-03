@@ -186,14 +186,13 @@ export function FragmentMobile({ data }: Props) {
         </Hint>
       </div>
 
-      {/* Snack Embed - Strategic Crop to show ONLY simulator + device tabs */}
+      {/* Snack Embed - Crop to show ONLY the iPhone device + tabs (background remover style) */}
       <div className="flex-1 w-full overflow-hidden flex items-center justify-center relative bg-background">
         <div 
-          className="relative overflow-hidden rounded-lg"
+          className="relative overflow-hidden"
           style={{ 
-            width: '420px',
-            height: '90%',
-            maxHeight: '800px',
+            width: '400px',
+            height: '750px',
           }}
         >
           <iframe
@@ -202,9 +201,9 @@ export function FragmentMobile({ data }: Props) {
             style={{ 
               border: 'none',
               width: '1600px',
-              height: '110%',
-              marginLeft: '-1050px',
-              marginTop: '0px',
+              height: '900px',
+              marginLeft: '-1080px', // Shift to center the phone
+              marginTop: '-50px', // Adjust vertical position
               transform: 'scale(1)',
             }}
             sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
