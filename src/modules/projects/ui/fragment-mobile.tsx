@@ -202,8 +202,8 @@ export function FragmentMobile({ data }: Props) {
               border: 'none',
               width: '1600px',
               height: '900px',
-              marginLeft: '-1080px', // Shift to center the phone
-              marginTop: '-50px', // Adjust vertical position
+              marginLeft: '-1000px', // Shifted RIGHT (less negative = more right)
+              marginTop: '-50px',
               transform: 'scale(1)',
             }}
             sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
