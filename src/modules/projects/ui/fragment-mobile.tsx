@@ -20,6 +20,9 @@ interface SnackResponse {
   error?: string;
 }
 
+// Snack's actual dark background color
+const SNACK_BG = '#212121';
+
 export function FragmentMobile({ data }: Props) {
   const [fragmentKey, setFragmentKey] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -65,7 +68,7 @@ export function FragmentMobile({ data }: Props) {
           body: JSON.stringify({
             files,
             name: data.title || 'Mobile App',
-            dependencies, // ← Pass AI-generated dependencies
+            dependencies,
           }),
         });
 
@@ -101,7 +104,7 @@ export function FragmentMobile({ data }: Props) {
   // Loading state
   if (isCreatingSnack) {
     return (
-      <div className="flex flex-col items-center justify-center h-full bg-zinc-950 text-white">
+      <div className="flex flex-col items-center justify-center h-full text-white" style={{ backgroundColor: SNACK_BG }}>
         <Loader2 className="size-12 animate-spin text-blue-400 mb-4" />
         <p className="text-lg font-semibold">Creating Expo Snack...</p>
         <p className="text-sm text-zinc-400 mt-2">Uploading your mobile app</p>
@@ -112,7 +115,7 @@ export function FragmentMobile({ data }: Props) {
   // Error state
   if (error || !snackData) {
     return (
-      <div className="flex flex-col items-center justify-center h-full bg-zinc-950 text-white">
+      <div className="flex flex-col items-center justify-center h-full text-white" style={{ backgroundColor: SNACK_BG }}>
         <p className="text-lg font-semibold text-red-400">Unable to create preview</p>
         <p className="text-sm text-zinc-400 mt-2 max-w-md text-center">{error || 'Unknown error'}</p>
         <button
@@ -129,7 +132,7 @@ export function FragmentMobile({ data }: Props) {
   // No code
   if (!appCode) {
     return (
-      <div className="flex flex-col items-center justify-center h-full bg-zinc-950 text-white">
+      <div className="flex flex-col items-center justify-center h-full text-white" style={{ backgroundColor: SNACK_BG }}>
         <Smartphone className="size-12 text-zinc-600 mb-4" />
         <p className="text-lg font-semibold text-zinc-400">No mobile code available</p>
         <p className="text-sm text-zinc-500 mt-2">Generate a mobile app to see the preview</p>
@@ -138,9 +141,9 @@ export function FragmentMobile({ data }: Props) {
   }
 
   return (
-    <div className="flex flex-col w-full h-full" style={{ backgroundColor: '#1a1a1a' }}>
+    <div className="flex flex-col w-full h-full" style={{ backgroundColor: SNACK_BG }}>
       {/* Header */}
-      <div className="px-3 py-2.5 flex items-center gap-2 border-b border-zinc-800" style={{ backgroundColor: '#1a1a1a' }}>
+      <div className="px-3 py-2.5 flex items-center gap-2 border-b border-zinc-800" style={{ backgroundColor: SNACK_BG }}>
         <Hint text="Refresh Preview" side="bottom" align="start">
           <button
             onClick={onRefresh}
@@ -187,14 +190,14 @@ export function FragmentMobile({ data }: Props) {
       </div>
 
       {/* Snack Embed - Centered Simulator Only */}
-      <div className="flex-1 w-full overflow-hidden flex items-center justify-center relative" style={{ backgroundColor: '#1a1a1a' }}>
+      <div className="flex-1 w-full overflow-hidden flex items-center justify-center relative" style={{ backgroundColor: SNACK_BG }}>
         {/* Container that clips the iframe to show only right side (simulator) */}
         <div 
           className="relative overflow-hidden"
           style={{ 
             width: '500px', 
             height: '100%',
-            backgroundColor: '#1a1a1a', // Match Snack's dark background
+            backgroundColor: SNACK_BG,
           }}
         >
           <iframe
@@ -202,9 +205,9 @@ export function FragmentMobile({ data }: Props) {
             src={snackData.embedUrl}
             style={{ 
               border: 'none',
-              width: '1600px', // Make iframe wider than container
+              width: '1600px',
               height: '100%',
-              marginLeft: '-1100px', // Shift left to hide editor, show simulator
+              marginLeft: '-1100px',
               transform: 'scale(1)',
             }}
             sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
@@ -215,7 +218,7 @@ export function FragmentMobile({ data }: Props) {
       </div>
 
       {/* Info Footer */}
-      <div className="px-4 py-2 border-t border-zinc-800 flex items-center justify-between" style={{ backgroundColor: '#1a1a1a' }}>
+      <div className="px-4 py-2 border-t border-zinc-800 flex items-center justify-between" style={{ backgroundColor: SNACK_BG }}>
         <p className="text-xs text-zinc-500">
           
         </p>
