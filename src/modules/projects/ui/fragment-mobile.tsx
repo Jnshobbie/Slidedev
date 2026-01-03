@@ -189,10 +189,11 @@ export function FragmentMobile({ data }: Props) {
       {/* Snack Embed - Strategic Crop to show ONLY simulator + device tabs */}
       <div className="flex-1 w-full overflow-hidden flex items-center justify-center relative bg-background">
         <div 
-          className="relative overflow-hidden"
+          className="relative overflow-hidden rounded-lg"
           style={{ 
-            width: '450px',
-            height: '100%',
+            width: '420px',
+            height: '90%',
+            maxHeight: '800px',
           }}
         >
           <iframe
@@ -200,10 +201,10 @@ export function FragmentMobile({ data }: Props) {
             src={snackData.embedUrl}
             style={{ 
               border: 'none',
-              width: '1920px', // Full Snack width
-              height: '100%',
-              marginLeft: '-1100px', // Shift to show only right side (simulator area)
-              marginTop: '-60px', // Crop out top navigation
+              width: '1600px',
+              height: '110%',
+              marginLeft: '-1050px',
+              marginTop: '0px',
               transform: 'scale(1)',
             }}
             sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
