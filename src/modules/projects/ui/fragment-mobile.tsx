@@ -20,9 +20,6 @@ interface SnackResponse {
   error?: string;
 }
 
-// Snack's actual dark background color
-const SNACK_BG = '#212121';
-
 export function FragmentMobile({ data }: Props) {
   const [fragmentKey, setFragmentKey] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -89,7 +86,7 @@ export function FragmentMobile({ data }: Props) {
     };
 
     createSnack();
-  }, [appCode, files, data.title]);
+  }, [appCode, files, data.title, dependencies]);
 
   const onRefresh = () => {
     setFragmentKey((prev) => prev + 1);
@@ -104,10 +101,10 @@ export function FragmentMobile({ data }: Props) {
   // Loading state
   if (isCreatingSnack) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-white" style={{ backgroundColor: SNACK_BG }}>
+      <div className="flex flex-col items-center justify-center h-full bg-background text-foreground">
         <Loader2 className="size-12 animate-spin text-blue-400 mb-4" />
         <p className="text-lg font-semibold">Creating Expo Snack...</p>
-        <p className="text-sm text-zinc-400 mt-2">Uploading your mobile app</p>
+        <p className="text-sm text-muted-foreground mt-2">Uploading your mobile app</p>
       </div>
     );
   }
@@ -115,9 +112,9 @@ export function FragmentMobile({ data }: Props) {
   // Error state
   if (error || !snackData) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-white" style={{ backgroundColor: SNACK_BG }}>
+      <div className="flex flex-col items-center justify-center h-full bg-background text-foreground">
         <p className="text-lg font-semibold text-red-400">Unable to create preview</p>
-        <p className="text-sm text-zinc-400 mt-2 max-w-md text-center">{error || 'Unknown error'}</p>
+        <p className="text-sm text-muted-foreground mt-2 max-w-md text-center">{error || 'Unknown error'}</p>
         <button
           onClick={handleCopy}
           className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2"
@@ -132,24 +129,24 @@ export function FragmentMobile({ data }: Props) {
   // No code
   if (!appCode) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-white" style={{ backgroundColor: SNACK_BG }}>
-        <Smartphone className="size-12 text-zinc-600 mb-4" />
-        <p className="text-lg font-semibold text-zinc-400">No mobile code available</p>
-        <p className="text-sm text-zinc-500 mt-2">Generate a mobile app to see the preview</p>
+      <div className="flex flex-col items-center justify-center h-full bg-background text-foreground">
+        <Smartphone className="size-12 text-muted-foreground mb-4" />
+        <p className="text-lg font-semibold text-muted-foreground">No mobile code available</p>
+        <p className="text-sm text-muted-foreground mt-2">Generate a mobile app to see the preview</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col w-full h-full" style={{ backgroundColor: SNACK_BG }}>
+    <div className="flex flex-col w-full h-full bg-background">
       {/* Header */}
-      <div className="px-3 py-2.5 flex items-center gap-2 border-b border-zinc-800" style={{ backgroundColor: SNACK_BG }}>
+      <div className="px-3 py-2.5 flex items-center gap-2 border-b border-border bg-background">
         <Hint text="Refresh Preview" side="bottom" align="start">
           <button
             onClick={onRefresh}
             className={cn(
               "inline-flex items-center justify-center rounded-md transition-all shrink-0",
-              "h-8 w-8 bg-zinc-800 hover:bg-zinc-700",
+              "h-8 w-8 bg-secondary hover:bg-secondary/80",
               "[&_svg]:size-4 [&_svg]:shrink-0"
             )}
           >
@@ -159,7 +156,7 @@ export function FragmentMobile({ data }: Props) {
 
         <div className="flex items-center gap-2 flex-1 justify-center">
           <Smartphone className="size-4 text-blue-400" />
-          <span className="text-sm text-zinc-400">iOS Preview • Expo Snack</span>
+          <span className="text-sm text-muted-foreground">iOS Preview • Expo Snack</span>
         </div>
 
         <Hint text={copied ? "Copied!" : "Copy Code"} side="bottom" align="end">
@@ -167,7 +164,7 @@ export function FragmentMobile({ data }: Props) {
             onClick={handleCopy}
             className={cn(
               "inline-flex items-center justify-center rounded-md transition-all shrink-0",
-              "h-8 w-8 bg-zinc-800 hover:bg-zinc-700",
+              "h-8 w-8 bg-secondary hover:bg-secondary/80",
               "[&_svg]:size-4 [&_svg]:shrink-0"
             )}
           >
@@ -180,7 +177,7 @@ export function FragmentMobile({ data }: Props) {
             onClick={() => window.open(snackData.snackUrl, "_blank")}
             className={cn(
               "inline-flex items-center justify-center rounded-md transition-all shrink-0",
-              "h-8 w-8 bg-zinc-800 hover:bg-zinc-700",
+              "h-8 w-8 bg-secondary hover:bg-secondary/80",
               "[&_svg]:size-4 [&_svg]:shrink-0"
             )}
           >
@@ -189,15 +186,13 @@ export function FragmentMobile({ data }: Props) {
         </Hint>
       </div>
 
-      {/* Snack Embed - Centered Simulator Only */}
-      <div className="flex-1 w-full overflow-hidden flex items-center justify-center relative" style={{ backgroundColor: SNACK_BG }}>
-        {/* Container that clips the iframe to show only right side (simulator) */}
+      {/* Snack Embed - Strategic Crop to show ONLY simulator + device tabs */}
+      <div className="flex-1 w-full overflow-hidden flex items-center justify-center relative bg-background">
         <div 
           className="relative overflow-hidden"
           style={{ 
-            width: '500px', 
+            width: '450px',
             height: '100%',
-            backgroundColor: SNACK_BG,
           }}
         >
           <iframe
@@ -205,9 +200,10 @@ export function FragmentMobile({ data }: Props) {
             src={snackData.embedUrl}
             style={{ 
               border: 'none',
-              width: '1600px',
+              width: '1920px', // Full Snack width
               height: '100%',
-              marginLeft: '-1100px',
+              marginLeft: '-1100px', // Shift to show only right side (simulator area)
+              marginTop: '-60px', // Crop out top navigation
               transform: 'scale(1)',
             }}
             sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
@@ -218,11 +214,11 @@ export function FragmentMobile({ data }: Props) {
       </div>
 
       {/* Info Footer */}
-      <div className="px-4 py-2 border-t border-zinc-800 flex items-center justify-between" style={{ backgroundColor: SNACK_BG }}>
-        <p className="text-xs text-zinc-500">
+      <div className="px-4 py-2 border-t border-border bg-background flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
           
         </p>
-        <div className="flex items-center gap-2 text-xs text-zinc-500">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <QrCode className="size-3" />
           <span>Scan QR inside preview to test on device</span>
         </div>
