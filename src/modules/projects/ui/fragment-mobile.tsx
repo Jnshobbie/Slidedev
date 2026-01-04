@@ -28,8 +28,8 @@ export function FragmentMobile({ data }: Props) {
   const [error, setError] = useState<string>("");
   
   // Positioning controls
-  const [marginLeft, setMarginLeft] = useState(-1320);
-  const [marginTop, setMarginTop] = useState(-60);
+  const [marginLeft, setMarginLeft] = useState(-1120);
+  const [marginTop, setMarginTop] = useState(-80);
   const [showControls, setShowControls] = useState(false);
 
   const files = useMemo(() => {
@@ -186,7 +186,7 @@ export function FragmentMobile({ data }: Props) {
           className="relative overflow-hidden"
           style={{ 
             width: '420px',
-            height: '920px', // Taller to show device tabs
+            height: '100%', // Use full available height
           }}
         >
           <iframe
