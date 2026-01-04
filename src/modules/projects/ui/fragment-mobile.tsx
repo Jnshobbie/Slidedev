@@ -20,12 +20,8 @@ interface SnackResponse {
   error?: string;
 }
 
-// Try these common Snack dark backgrounds (test each one):
-// Option 1: #1C1C1E (iOS dark card)
-// Option 2: #242c40 (Expo dark container from docs)
-// Option 3: #121212 (Material dark)
-// Option 4: #0d1117 (GitHub dark)
-const SNACK_BG = '#242c40'; // Start with Expo's documented dark color
+// Snack's dark theme background
+const SNACK_BG = '#212121';
 
 export function FragmentMobile({ data }: Props) {
   const [fragmentKey, setFragmentKey] = useState(0);
@@ -182,31 +178,20 @@ export function FragmentMobile({ data }: Props) {
         </Hint>
       </div>
 
-      {/* Snack Embed - Simple no cropping */}
-      <div className="flex-1 w-full overflow-hidden flex items-center justify-center relative" style={{ backgroundColor: SNACK_BG }}>
-        <div 
-          className="relative overflow-hidden"
+      {/* Clean Snack Embed - Editor hidden via URL parameter */}
+      <div className="flex-1 w-full overflow-hidden relative" style={{ backgroundColor: SNACK_BG }}>
+        <iframe
+          key={fragmentKey}
+          src={snackData.embedUrl}
           style={{ 
-            width: '500px', 
+            border: 'none',
+            width: '100%',
             height: '100%',
-            backgroundColor: SNACK_BG,
           }}
-        >
-          <iframe
-            key={fragmentKey}
-            src={snackData.embedUrl}
-            style={{ 
-              border: 'none',
-              width: '1600px',
-              height: '100%',
-              marginLeft: '-1100px',
-              transform: 'scale(1)',
-            }}
-            sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
-            allow="clipboard-write; clipboard-read"
-            title="Expo Snack Mobile Preview"
-          />
-        </div>
+          sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
+          allow="clipboard-write; clipboard-read"
+          title="Expo Snack Mobile Preview"
+        />
       </div>
 
       {/* Info Footer */}
@@ -219,4 +204,4 @@ export function FragmentMobile({ data }: Props) {
       </div>
     </div>
   );
-} 
+}
