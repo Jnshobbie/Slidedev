@@ -191,7 +191,7 @@ export function FragmentMobile({ data }: Props) {
         <div 
           className="relative overflow-hidden"
           style={{ 
-            width: '400px',
+            width: '500px', // Wider container to fit phone + tabs
             height: '750px',
           }}
         >
@@ -202,7 +202,7 @@ export function FragmentMobile({ data }: Props) {
               border: 'none',
               width: '1600px',
               height: '900px',
-              marginLeft: '-900px', // Shifted MORE RIGHT
+              marginLeft: '-970px', // Sweet spot based on all tests
               marginTop: '-50px',
               transform: 'scale(1)',
             }}
