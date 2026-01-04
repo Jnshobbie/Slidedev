@@ -191,8 +191,8 @@ export function FragmentMobile({ data }: Props) {
         <div 
           className="relative overflow-hidden"
           style={{ 
-            width: '500px', // Wider container to fit phone + tabs
-            height: '750px',
+            width: '450px',
+            height: '800px',
           }}
         >
           <iframe
@@ -202,8 +202,8 @@ export function FragmentMobile({ data }: Props) {
               border: 'none',
               width: '1600px',
               height: '900px',
-              marginLeft: '-970px', // Sweet spot based on all tests
-              marginTop: '-50px',
+              marginLeft: '-1150px', // Position to show phone on right side naturally
+              marginTop: '-30px',
               transform: 'scale(1)',
             }}
             sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
