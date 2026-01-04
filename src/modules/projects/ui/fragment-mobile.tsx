@@ -29,7 +29,7 @@ export function FragmentMobile({ data }: Props) {
   
   // Positioning controls
   const [marginLeft, setMarginLeft] = useState(-1320);
-  const [marginTop, setMarginTop] = useState(-10); // Less crop on top
+  const [marginTop, setMarginTop] = useState(-60);
   const [showControls, setShowControls] = useState(false);
 
   const files = useMemo(() => {
@@ -264,4 +264,4 @@ export function FragmentMobile({ data }: Props) {
       </div>
     </div>
   );
-} 
+}
