@@ -191,8 +191,8 @@ export function FragmentMobile({ data }: Props) {
         <div 
           className="relative overflow-hidden"
           style={{ 
-            width: '450px',
-            height: '800px',
+            width: '420px',
+            height: '850px', // Taller to show device tabs
           }}
         >
           <iframe
@@ -201,8 +201,8 @@ export function FragmentMobile({ data }: Props) {
             style={{ 
               border: 'none',
               width: '1600px',
-              height: '900px',
-              marginLeft: '-1150px', // Position to show phone on right side naturally
+              height: '1000px', // Taller iframe to include tabs
+              marginLeft: '-1130px', // Crop out more of the black sidebar
               marginTop: '-30px',
               transform: 'scale(1)',
             }}
