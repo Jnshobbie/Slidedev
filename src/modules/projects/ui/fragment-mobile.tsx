@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { ExternalLinkIcon, RefreshCcwIcon, Smartphone, Copy, CheckIcon, QrCode, Loader2 } from "lucide-react";
+import { ExternalLinkIcon, RefreshCcwIcon, Smartphone, Copy, CheckIcon, QrCode, Loader2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 
 import { Fragment } from "@/generated/prisma";
 import { Hint } from "@/components/hint";
@@ -26,27 +26,28 @@ export function FragmentMobile({ data }: Props) {
   const [isCreatingSnack, setIsCreatingSnack] = useState(true);
   const [snackData, setSnackData] = useState<SnackResponse | null>(null);
   const [error, setError] = useState<string>("");
+  
+  // Positioning controls
+  const [marginLeft, setMarginLeft] = useState(-1130);
+  const [marginTop, setMarginTop] = useState(-30);
+  const [showControls, setShowControls] = useState(false);
 
-  // Extract files from fragment
   const files = useMemo(() => {
     return data.files && typeof data.files === 'object' 
       ? (data.files as Record<string, string>)
       : {};
   }, [data.files]);
 
-  // Extract dependencies from fragment
   const dependencies = useMemo(() => {
     return data.dependencies && typeof data.dependencies === 'object'
       ? (data.dependencies as Record<string, string>)
       : {};
   }, [data.dependencies]);
 
-  // Get App.tsx content
   const appCode = useMemo(() => {
     return files['App.tsx'] || files['App.js'] || '';
   }, [files]);
 
-  // Create Snack via External Microservice
   useEffect(() => {
     if (!appCode) return;
 
@@ -54,8 +55,6 @@ export function FragmentMobile({ data }: Props) {
       try {
         setIsCreatingSnack(true);
         setError("");
-
-        console.log('📱 Calling Snack microservice...');
 
         const response = await fetch('https://slidedev-snack-service.vercel.app/api/create-snack', {
           method: 'POST',
@@ -75,10 +74,8 @@ export function FragmentMobile({ data }: Props) {
           throw new Error(result.error || 'Failed to create Snack');
         }
 
-        console.log('✅ Snack created:', result);
         setSnackData(result);
       } catch (err) {
-        console.error('❌ Failed to create Snack:', err);
         setError(err instanceof Error ? err.message : 'Failed to create preview');
       } finally {
         setIsCreatingSnack(false);
@@ -98,7 +95,6 @@ export function FragmentMobile({ data }: Props) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Loading state
   if (isCreatingSnack) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-background text-foreground">
@@ -109,7 +105,6 @@ export function FragmentMobile({ data }: Props) {
     );
   }
 
-  // Error state
   if (error || !snackData) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-background text-foreground">
@@ -126,7 +121,6 @@ export function FragmentMobile({ data }: Props) {
     );
   }
 
-  // No code
   if (!appCode) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-background text-foreground">
@@ -186,13 +180,13 @@ export function FragmentMobile({ data }: Props) {
         </Hint>
       </div>
 
-      {/* Snack Embed - Crop to show ONLY the iPhone device + tabs (background remover style) */}
+      {/* Snack Embed */}
       <div className="flex-1 w-full overflow-hidden flex items-center justify-center relative bg-background">
         <div 
           className="relative overflow-hidden"
           style={{ 
             width: '420px',
-            height: '850px', // Taller to show device tabs
+            height: '850px',
           }}
         >
           <iframe
@@ -201,9 +195,9 @@ export function FragmentMobile({ data }: Props) {
             style={{ 
               border: 'none',
               width: '1600px',
-              height: '1000px', // Taller iframe to include tabs
-              marginLeft: '-1130px', // Crop out more of the black sidebar
-              marginTop: '-30px',
+              height: '1000px',
+              marginLeft: `${marginLeft}px`,
+              marginTop: `${marginTop}px`,
               transform: 'scale(1)',
             }}
             sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
@@ -211,13 +205,58 @@ export function FragmentMobile({ data }: Props) {
             title="Expo Snack Mobile Preview"
           />
         </div>
+
+        {/* Debug Position Controls - Remove after finding perfect values */}
+        <button
+          onClick={() => setShowControls(!showControls)}
+          className="absolute top-4 right-4 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+        >
+          {showControls ? 'Hide' : 'Adjust Position'}
+        </button>
+
+        {showControls && (
+          <div className="absolute top-16 right-4 bg-background border border-border rounded-lg p-4 shadow-lg">
+            <p className="text-xs font-semibold mb-2">Position Controls</p>
+            
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Horizontal (marginLeft: {marginLeft})</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setMarginLeft(m => m - 10)} className="p-2 bg-secondary rounded hover:bg-secondary/80">
+                    <ChevronLeft className="size-4" />
+                  </button>
+                  <button onClick={() => setMarginLeft(m => m + 10)} className="p-2 bg-secondary rounded hover:bg-secondary/80">
+                    <ChevronRight className="size-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Vertical (marginTop: {marginTop})</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setMarginTop(m => m - 10)} className="p-2 bg-secondary rounded hover:bg-secondary/80">
+                    <ChevronUp className="size-4" />
+                  </button>
+                  <button onClick={() => setMarginTop(m => m + 10)} className="p-2 bg-secondary rounded hover:bg-secondary/80">
+                    <ChevronDown className="size-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-border">
+                <p className="text-xs font-mono bg-secondary p-2 rounded">
+                  marginLeft: {marginLeft}px<br/>
+                  marginTop: {marginTop}px
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Info Footer */}
       <div className="px-4 py-2 border-t border-border bg-background flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">
-          
-        </p>
+        <p className="text-xs text-muted-foreground"></p>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <QrCode className="size-3" />
           <span>Scan QR inside preview to test on device</span>
