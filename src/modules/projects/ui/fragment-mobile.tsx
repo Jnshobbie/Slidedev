@@ -178,20 +178,34 @@ export function FragmentMobile({ data }: Props) {
         </Hint>
       </div>
 
-      {/* Clean Snack Embed - Editor hidden via URL parameter */}
-      <div className="flex-1 w-full overflow-hidden relative" style={{ backgroundColor: SNACK_BG }}>
-        <iframe
-          key={fragmentKey}
-          src={snackData.embedUrl}
+      {/* Clean Snack Embed - Visually crop to show only phone preview */}
+      <div className="flex-1 w-full overflow-hidden flex items-center justify-center relative" style={{ backgroundColor: SNACK_BG }}>
+        {/* Crop container - only shows phone area */}
+        <div 
+          className="relative overflow-hidden rounded-3xl"
           style={{ 
-            border: 'none',
-            width: '100%',
-            height: '100%',
+            width: '380px',
+            height: '780px',
+            backgroundColor: '#000',
           }}
-          sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
-          allow="clipboard-write; clipboard-read"
-          title="Expo Snack Mobile Preview"
-        />
+        >
+          <iframe
+            key={fragmentKey}
+            src={snackData.embedUrl}
+            style={{ 
+              border: 'none',
+              width: '1400px',
+              height: '1000px',
+              position: 'absolute',
+              top: '-90px',
+              left: '-750px',
+              pointerEvents: 'auto',
+            }}
+            sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
+            allow="clipboard-write; clipboard-read"
+            title="Expo Snack Mobile Preview"
+          />
+        </div>
       </div>
 
       {/* Info Footer */}
