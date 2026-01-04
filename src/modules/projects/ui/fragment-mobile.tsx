@@ -264,4 +264,4 @@ export function FragmentMobile({ data }: Props) {
       </div>
     </div>
   );
-}
+} 
