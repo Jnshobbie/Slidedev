@@ -202,7 +202,7 @@ export function FragmentMobile({ data }: Props) {
               border: 'none',
               width: '1600px',
               height: '900px',
-              marginLeft: '-1000px', // Shifted RIGHT (less negative = more right)
+              marginLeft: '-900px', // Shifted MORE RIGHT
               marginTop: '-50px',
               transform: 'scale(1)',
             }}
