@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Sandbox } from "@e2b/code-interpreter"; 
 import { openai, createAgent, createTool, createNetwork, type Tool, type Message, createState } from "@inngest/agent-kit"; 
 
-import { FRAGMENT_TITLE_PROMPT, PROMPT, RESPONSE_PROMPT, getPromptForProjectType } from "@/prompt";
+import { FRAGMENT_TITLE_PROMPT, RESPONSE_PROMPT, getPromptForProjectType } from "@/prompt";
 import { prisma } from "@/lib/db"; 
 
 import { inngest } from "./client";
@@ -130,10 +130,29 @@ export const codeAgentFunction = inngest.createFunction(
       },
     );
 
-    // Use correct prompt based on project type
-    const systemPrompt = getPromptForProjectType(projectType);
+    // 🎯 NEW: Pass user message for smart prompt detection
+    const userMessage = event.data.value;
+    const systemPrompt = getPromptForProjectType(projectType, userMessage);
     
-    console.log(`📝 Using ${isMobile ? 'MOBILE' : 'WEB'} prompt`);
+    // Log which style is being used
+    if (projectType === 'web') {
+      const isLandingPage = userMessage.toLowerCase().includes('landing') || 
+                           userMessage.toLowerCase().includes('homepage') ||
+                           userMessage.toLowerCase().includes('marketing');
+      const isDashboard = userMessage.toLowerCase().includes('dashboard') || 
+                         userMessage.toLowerCase().includes('admin') ||
+                         userMessage.toLowerCase().includes('workspace');
+      
+      if (isLandingPage) {
+        console.log('🎨 Using MARKETING/LANDING PAGE patterns (gradients, flashy)');
+      } else if (isDashboard) {
+        console.log('💼 Using WORKSPACE/DASHBOARD patterns (professional, neutral)');
+      } else {
+        console.log('💼 Using default WORKSPACE patterns');
+      }
+    } else {
+      console.log('📱 Using MOBILE patterns (clean, no gradients)');
+    }
 
     const codeAgent = createAgent<AgentState>({
       name: isMobile ? "mobile-code-agent" : "code-agent",
@@ -372,7 +391,7 @@ export const codeAgentFunction = inngest.createFunction(
               sandboxUrl: sandboxUrl,
               title: parseAgentOutput(fragmentTitleOutput),
               files: result.state.data.files,
-              dependencies: dependencies || undefined, // NEW: Save dependencies
+              dependencies: dependencies || undefined, // Save dependencies for mobile
             }
           }
         },
