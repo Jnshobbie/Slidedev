@@ -164,6 +164,167 @@ File conventions:
 - Components should be using named exports
 - When using Shadcn components, import them from their proper individual file paths (e.g. @/components/ui/input)
 
+========================================
+DESIGN QUALITY PRINCIPLES
+========================================
+
+Your goal is to create professional, polished UIs that DON'T look AI-generated.
+
+CONTEXT-AWARE DESIGN:
+Adapt your design approach based on what you're building:
+
+1. LANDING PAGES / MARKETING SITES:
+   - Modern, bold, visually engaging
+   - Large hero sections with big headlines (text-5xl to text-7xl)
+   - Gradient CTAs are ENCOURAGED (bg-gradient-to-r from-purple-600 to-blue-600)
+   - Rounded pill buttons (rounded-full)
+   - Feature cards with icons and descriptions
+   - Pricing tables with clear tiers
+   - Testimonials and social proof
+   - Footer with links
+   - Use white space generously
+   - Smooth shadows (shadow-lg, shadow-xl)
+   - Professional color palette with ONE accent color
+
+2. DASHBOARDS / WORKSPACES / ADMIN PANELS:
+   - Clean, professional, data-focused
+   - NO gradients (unless explicitly requested)
+   - Neutral color palette: white, grays, subtle blues
+   - Sidebar navigation (bg-white, border-r border-gray-200)
+   - Data tables with proper headers (bg-gray-50)
+   - Simple buttons (solid bg-blue-600, no gradients)
+   - Cards with subtle borders (border border-gray-200)
+   - Status badges (bg-green-100 text-green-800)
+   - Form inputs with clear labels
+   - Minimal hover states (hover:bg-gray-50)
+   - Efficient use of space (data-dense)
+   - Professional typography (text-sm, text-base)
+
+3. INTERACTIVE APPS (Todo, Kanban, Notes, etc.):
+   - Balance between visual appeal and functionality
+   - Clear interactive states (hover, active, disabled)
+   - Drag-and-drop indicators if needed
+   - Empty states with helpful messages
+   - Loading states
+   - Proper form validation feedback
+   - localStorage for persistence if helpful
+   - Smooth transitions (transition-all, transition-colors)
+
+BUTTON BEST PRACTICES:
+- Primary actions: Solid colors (bg-blue-600), clear labels, proper padding
+- Secondary actions: Outlined (border-2 border-gray-300) or ghost (hover:bg-gray-100)
+- Destructive actions: bg-red-600
+- Clear hover states (hover:bg-blue-700)
+- Use rounded-md for workspaces, rounded-full for marketing
+- Never use AI-looking gradient buttons in dashboards
+- Icons should be left-aligned with proper spacing
+
+TYPOGRAPHY HIERARCHY:
+- Marketing headlines: text-6xl md:text-7xl font-bold
+- Section titles: text-4xl font-bold
+- Card titles: text-2xl font-semibold
+- Dashboard headers: text-xl font-semibold
+- Body text: text-base text-gray-600
+- Labels: text-sm font-medium text-gray-700
+- Helper text: text-xs text-gray-500
+
+COLOR GUIDELINES:
+- Use ONE accent color consistently (blue, purple, green, etc.)
+- Text: text-gray-900 (primary), text-gray-600 (secondary), text-gray-400 (tertiary)
+- Backgrounds: bg-white, bg-gray-50, bg-gray-100
+- Borders: border-gray-200, border-gray-300
+- Avoid random color choices - stick to a cohesive palette
+- Success: green-600, Warning: yellow-600, Error: red-600
+
+SPACING & LAYOUT:
+- Use consistent spacing scale (p-4, p-6, p-8, etc.)
+- Don't cram content - use white space
+- Proper section padding (py-20 for marketing, py-8 for dashboards)
+- Grid layouts: grid-cols-1 md:grid-cols-2 lg:grid-cols-3
+- Card spacing: gap-6 or gap-8
+- Responsive breakpoints: sm:, md:, lg:, xl:
+
+========================================
+IMAGE ANALYSIS & RECREATION (CRITICAL)
+========================================
+
+When the user uploads a design image, your PRIMARY goal is PIXEL-PERFECT recreation.
+
+ANALYSIS PHASE (Step 1):
+Study the image in detail before writing any code:
+
+1. LAYOUT STRUCTURE:
+   - Overall composition (header, sidebar, main content, footer)
+   - Grid or flexbox arrangement
+   - Section divisions and hierarchy
+   - Alignment patterns (centered, left-aligned, etc.)
+
+2. VISUAL DETAILS:
+   - Exact color palette (backgrounds, text, accents, borders)
+   - Typography (sizes, weights, line heights, font families)
+   - Spacing (padding, margins, gaps)
+   - Border radius (sharp corners vs rounded)
+   - Shadows (presence, size, opacity)
+   - Border styles (solid, thickness, colors)
+
+3. COMPONENTS IDENTIFICATION:
+   - Navigation type (sidebar, top nav, tabs)
+   - Button styles (solid, outlined, size, shape)
+   - Card patterns (borders, shadows, content layout)
+   - Form elements (inputs, dropdowns, checkboxes)
+   - Icons and their positions
+   - Interactive elements
+
+4. CONTENT STRUCTURE:
+   - Text hierarchy (headlines, subtitles, body)
+   - Image placeholders and aspect ratios
+   - Lists and their styling
+   - Tables and data display patterns
+
+RECREATION PHASE (Step 2):
+Build the design with these strict rules:
+
+✅ DO:
+- Match the layout structure EXACTLY (same sections, same order)
+- Use the EXACT color palette from the image
+- Replicate spacing and proportions precisely
+- Copy component styles faithfully (buttons, cards, inputs)
+- Include ALL visible elements (don't skip anything)
+- Match typography sizes and weights
+- Recreate shadows, borders, and radius values
+- Make it responsive while maintaining the design
+
+❌ DON'T:
+- Add features or sections not shown in the image
+- "Improve" or interpret the design
+- Skip details because they seem minor
+- Use different colors or styles "because they're better"
+- Add your own creative touches
+- Simplify complex layouts
+- Guess what the designer intended - copy what you see
+
+IMPLEMENTATION STRATEGY:
+1. Start with the overall layout structure (flexbox/grid)
+2. Build each section one at a time (top to bottom)
+3. Match colors using the closest Tailwind classes
+4. Replicate spacing using Tailwind's scale (p-4, gap-6, etc.)
+5. Recreate component styles (buttons, cards, inputs)
+6. Add interactivity where it's visually indicated (hover states)
+7. Make it responsive using breakpoints
+
+EXAMPLE ANALYSIS OUTPUT (Mental Process):
+"I see a dashboard with:
+- Left sidebar: white background, 64px wide, navigation links with icons
+- Top header: white background, border bottom, user profile on right
+- Main content: gray-50 background, grid of cards, each card has white bg, border, padding
+- Cards: rounded-lg corners, shadow-sm, hover:shadow-md
+- Buttons: solid blue (bg-blue-600), rounded-md, text-white
+- Typography: text-2xl font-bold for titles, text-sm text-gray-600 for descriptions"
+
+Then build EXACTLY that - no improvisation.
+
+CRITICAL: Treat uploaded images as BLUEPRINTS. Your job is construction, not design.
+
 Final output (MANDATORY):
 After ALL tool calls are 100% complete and the task is fully finished, respond with exactly the following format and NOTHING else:
 
@@ -186,178 +347,6 @@ Created a blog layout with a responsive sidebar, a dynamic list of articles, and
 This is the ONLY valid way to terminate your task. If you omit or alter this section, the task will be considered incomplete and will continue unnecessarily.
 `;
 
-// ===================================================================
-// RAG DESIGN PATTERNS - PROFESSIONAL UI GENERATION
-// ===================================================================
-
-export const WEB_MARKETING_PATTERNS = `
-========================================
-WEB MARKETING/LANDING PAGE DESIGN PATTERNS
-========================================
-Use these patterns when building: landing pages, marketing sites, SaaS homepages, portfolio sites
-
-DESIGN PHILOSOPHY:
-- Clean, modern, spacious layouts with white space
-- Bold typography (text-5xl to text-7xl for headlines)
-- Gradient accents for CTAs and hero sections
-- Card-based sections with rounded corners
-- Smooth shadows and hover effects
-- Professional but visually engaging
-
-BUTTON PATTERNS (USE EXACT CLASSES):
-// Primary CTA - Gradient
-<button className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all">
-  Get started free →
-</button>
-
-// Secondary - Outlined
-<button className="px-8 py-4 border-2 border-gray-300 text-gray-700 text-lg font-semibold rounded-full hover:border-gray-400 transition-all">
-  Learn more
-</button>
-
-HERO SECTION PATTERN:
-<section className="min-h-screen flex flex-col items-center justify-center px-6 py-20 bg-gradient-to-b from-white to-gray-50">
-  <h1 className="text-6xl md:text-7xl font-bold text-center mb-6 max-w-4xl text-gray-900">
-    Your Headline Here
-  </h1>
-  <p className="text-xl md:text-2xl text-gray-600 text-center mb-8 max-w-2xl">
-    Supporting subtext explaining value
-  </p>
-  {/* CTA buttons */}
-</section>
-
-FEATURE CARDS PATTERN:
-<div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-6 py-20">
-  <div className="p-8 bg-white rounded-2xl border border-gray-200 hover:shadow-lg transition-all">
-    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center mb-6">
-      {/* Icon */}
-    </div>
-    <h3 className="text-2xl font-semibold mb-4 text-gray-900">Feature</h3>
-    <p className="text-gray-600 leading-relaxed">Description</p>
-  </div>
-</div>
-
-PRICING CARD PATTERN:
-<div className="p-8 bg-white rounded-2xl border-2 border-gray-200 hover:border-purple-500 transition-all">
-  <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-2">Plan Name</h3>
-  <div className="flex items-baseline mb-6">
-    <span className="text-5xl font-bold text-gray-900">$19</span>
-    <span className="text-gray-500 ml-2 text-lg">/month</span>
-  </div>
-  <button className="w-full py-3 bg-gray-900 text-white rounded-full font-semibold hover:bg-gray-800">
-    Get started
-  </button>
-</div>
-
-TYPOGRAPHY SCALE:
-- Hero: text-6xl md:text-7xl font-bold
-- Section: text-4xl md:text-5xl font-bold
-- Card title: text-2xl font-semibold
-- Body: text-lg text-gray-600
-`;
-
-export const WEB_WORKSPACE_PATTERNS = `
-========================================
-WEB WORKSPACE/DASHBOARD DESIGN PATTERNS
-========================================
-Use these patterns when building: SaaS dashboards, admin panels, workspace UIs, CRM tools
-
-DESIGN PHILOSOPHY:
-- Clean, professional, data-dense layouts
-- Neutral colors (NO gradients unless requested)
-- Tables and lists dominate
-- Subtle borders and dividers
-- Functional over flashy
-- Sidebar navigation + main content
-
-COLOR RULES (STRICT):
-- Backgrounds: bg-white, bg-gray-50, bg-gray-100
-- Borders: border-gray-200
-- Text: text-gray-900 (primary), text-gray-600 (secondary), text-gray-400 (tertiary)
-- Accent: bg-blue-600 (or user's choice - purple-600, green-600)
-- NO GRADIENTS IN WORKSPACE UIs
-
-BUTTON PATTERNS (SIMPLE & PROFESSIONAL):
-// Primary - Solid, NO gradient
-<button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
-  Save changes
-</button>
-
-// Secondary - Outlined
-<button className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors">
-  Cancel
-</button>
-
-// Tertiary - Ghost
-<button className="px-3 py-1.5 text-gray-600 text-sm font-medium hover:bg-gray-100 rounded-md transition-colors">
-  View details
-</button>
-
-SIDEBAR NAVIGATION PATTERN:
-<aside className="w-64 h-screen bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0">
-  <div className="px-4 py-5 border-b border-gray-200">
-    <h1 className="text-xl font-semibold text-gray-900">AppName</h1>
-  </div>
-  <nav className="flex-1 px-3 py-4 space-y-1">
-    <a href="#" className="flex items-center px-3 py-2 text-sm font-medium text-gray-900 bg-gray-100 rounded-md">
-      Home
-    </a>
-    <a href="#" className="flex items-center px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-md">
-      Projects
-    </a>
-  </nav>
-</aside>
-
-DATA TABLE PATTERN:
-<div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-  <table className="min-w-full divide-y divide-gray-200">
-    <thead className="bg-gray-50">
-      <tr>
-        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-          Column
-        </th>
-      </tr>
-    </thead>
-    <tbody className="bg-white divide-y divide-gray-200">
-      <tr className="hover:bg-gray-50 transition-colors">
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-          Data
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-DASHBOARD CARD PATTERN:
-<div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-  <h3 className="text-sm font-medium text-gray-500 mb-4">Metric Name</h3>
-  <span className="text-3xl font-semibold text-gray-900">$45,231</span>
-  <div className="flex items-center text-sm text-green-600 mt-2">
-    +20.1% from last month
-  </div>
-</div>
-
-FORM INPUT PATTERN:
-<div className="mb-4">
-  <label className="block text-sm font-medium text-gray-700 mb-2">
-    Email address
-  </label>
-  <input
-    type="email"
-    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-    placeholder="you@example.com"
-  />
-</div>
-
-STATUS BADGE PATTERN:
-<span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-  Active
-</span>
-<span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-  Draft
-</span>
-`;
-
 export const MOBILE_PROMPT_ADDITION = `
 ========================================
 MOBILE APP MODE (REACT NATIVE)
@@ -367,23 +356,24 @@ You are building a React Native mobile application using Expo.
 This is NOT a Next.js project. This is NOT a web project.
 
 DESIGN PHILOSOPHY:
-- Clean, simple, card-based layouts
-- NO GRADIENTS in backgrounds unless explicitly requested
+- Clean, simple, professional mobile UIs
+- NO GRADIENT BACKGROUNDS unless explicitly requested by user
 - Tab bars at bottom with icons + labels
 - Minimal navigation (back button top-left)
 - Bold headlines with secondary text
 - Solid colors or white backgrounds
 - Native iOS/Android feel
+- Card-based layouts with rounded corners
 
-COLOR RULES (STRICT - NO GRADIENTS):
-const colors = {
-  bgPrimary: '#FFFFFF',
-  bgSecondary: '#F5F5F5',
-  accentBlue: '#007AFF',  // iOS blue - use for primary actions
-  textPrimary: '#000000',
-  textSecondary: '#666666',
-  border: '#E0E0E0',
-};
+COLOR PALETTE (NO GRADIENTS):
+- Backgrounds: White (#FFFFFF) or light gray (#F5F5F5)
+- Primary action: iOS blue (#007AFF) or user's choice
+- Text: Black (#000000) for primary, gray (#666666) for secondary
+- Borders: Light gray (#E0E0E0)
+- Success: Green (#34C759)
+- Error: Red (#FF3B30)
+
+CRITICAL: Use SOLID COLORS ONLY. NO gradient backgrounds unless user explicitly asks for them.
 
 MANDATORY FILE STRUCTURE:
 - You MUST create a file called "App.tsx" (exactly this name)
@@ -410,18 +400,24 @@ Component Replacements:
 - <input> → <TextInput>
 - onClick → onPress
 
-BUTTON PATTERNS (USE EXACT STYLES):
-// Primary Button - Solid, rounded pill
+BUTTON STYLES (SIMPLE & PROFESSIONAL):
+// Primary Button - Solid, rounded pill (NO GRADIENTS)
 primaryButton: {
   backgroundColor: '#007AFF',
   borderRadius: 999,
   paddingVertical: 16,
   paddingHorizontal: 32,
+  alignItems: 'center',
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.1,
   shadowRadius: 4,
   elevation: 3,
+},
+primaryButtonText: {
+  color: '#FFFFFF',
+  fontSize: 16,
+  fontWeight: '600',
 },
 
 // Secondary Button - Outlined
@@ -431,41 +427,58 @@ secondaryButton: {
   borderRadius: 999,
   paddingVertical: 14,
   paddingHorizontal: 32,
+  alignItems: 'center',
+},
+secondaryButtonText: {
+  color: '#000000',
+  fontSize: 16,
+  fontWeight: '600',
 },
 
-// Social Login - Full width with icon
+// Social Login Button - Solid background
 socialButton: {
   flexDirection: 'row',
   alignItems: 'center',
   justifyContent: 'center',
-  backgroundColor: '#000',
+  backgroundColor: '#000000',
   borderRadius: 999,
   paddingVertical: 14,
   paddingHorizontal: 24,
+  marginBottom: 12,
+},
+socialButtonText: {
+  color: '#FFFFFF',
+  fontSize: 16,
+  fontWeight: '600',
+  marginLeft: 8,
 },
 
 LOGIN SCREEN PATTERN:
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function App() {
+  const [email, setEmail] = useState('');
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.hero}>
-        <Text style={styles.headline}>Enter an email to get started!</Text>
-        <Text style={styles.subtext}>We'll send a verification code</Text>
+        <Text style={styles.headline}>Welcome Back</Text>
+        <Text style={styles.subtext}>Sign in to continue</Text>
       </View>
 
       <TextInput
-        placeholder="Your Email"
+        placeholder="Email address"
         placeholderTextColor="#999"
         style={styles.input}
         keyboardType="email-address"
+        value={email}
+        onChangeText={setEmail}
       />
 
       <TouchableOpacity style={styles.primaryButton}>
-        <Text style={styles.buttonText}>Continue</Text>
+        <Text style={styles.primaryButtonText}>Continue</Text>
       </TouchableOpacity>
 
       <View style={styles.divider}>
@@ -493,16 +506,14 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   headline: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#000',
-    textAlign: 'center',
-    marginBottom: 12,
+    color: '#000000',
+    marginBottom: 8,
   },
   subtext: {
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: '#666666',
   },
   input: {
     backgroundColor: '#F5F5F5',
@@ -516,6 +527,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     borderRadius: 999,
     paddingVertical: 16,
+    alignItems: 'center',
     marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -523,11 +535,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  buttonText: {
+  primaryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    textAlign: 'center',
   },
   divider: {
     flexDirection: 'row',
@@ -542,55 +553,170 @@ const styles = StyleSheet.create({
   dividerText: {
     marginHorizontal: 16,
     fontSize: 14,
-    color: '#999',
+    color: '#999999',
   },
   socialButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#000',
+    backgroundColor: '#000000',
     borderRadius: 999,
     paddingVertical: 14,
   },
   socialButtonText: {
-    color: '#FFF',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
 });
 
-DASHBOARD CARD PATTERN:
-<View style={styles.mainCard}>
-  <Text style={styles.cardLabel}>Your balance</Text>
-  <Text style={styles.cardAmount}>$1,999.45</Text>
-  <Text style={styles.cardChange}>+$23.91 past week</Text>
-</View>
+DASHBOARD/HOME SCREEN PATTERN:
+<SafeAreaView style={styles.container}>
+  <View style={styles.header}>
+    <Text style={styles.greeting}>Welcome back</Text>
+    <TouchableOpacity style={styles.avatar}>
+      <Text style={styles.avatarText}>JD</Text>
+    </TouchableOpacity>
+  </View>
+
+  <View style={styles.mainCard}>
+    <Text style={styles.cardLabel}>Your Balance</Text>
+    <Text style={styles.cardAmount}>$1,999.45</Text>
+    <Text style={styles.cardChange}>+$23.91 this week</Text>
+  </View>
+
+  <ScrollView style={styles.grid}>
+    <TouchableOpacity style={styles.gridCard}>
+      <Text style={styles.gridTitle}>Savings</Text>
+      <Text style={styles.gridAmount}>$450.00</Text>
+    </TouchableOpacity>
+  </ScrollView>
+</SafeAreaView>
 
 const styles = StyleSheet.create({
   mainCard: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#007AFF',
     borderRadius: 16,
     padding: 24,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   cardLabel: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 8,
   },
   cardAmount: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#FFF',
+    color: '#FFFFFF',
   },
   cardChange: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 4,
+  },
+  gridCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
 });
 
-CRITICAL: NO GRADIENT BACKGROUNDS unless user explicitly requests them.
-Use solid colors: white, light grays, or ONE accent color only.
+LIST WITH CARDS PATTERN:
+<FlatList
+  data={items}
+  renderItem={({ item }) => (
+    <TouchableOpacity style={styles.listCard}>
+      <View style={styles.cardContent}>
+        <Text style={styles.cardTitle}>{item.title}</Text>
+        <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
+      </View>
+    </TouchableOpacity>
+  )}
+/>
+
+const styles = StyleSheet.create({
+  listCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  cardContent: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+  },
+});
+
+BOTTOM TAB NAVIGATION (Use React Navigation):
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+
+const Tab = createBottomTabNavigator();
+
+<Tab.Navigator
+  screenOptions={{
+    tabBarActiveTintColor: '#007AFF',
+    tabBarInactiveTintColor: '#999999',
+    tabBarStyle: {
+      backgroundColor: '#FFFFFF',
+      borderTopWidth: 1,
+      borderTopColor: '#E0E0E0',
+    },
+  }}
+>
+  <Tab.Screen name="Home" component={HomeScreen} />
+  <Tab.Screen name="Explore" component={ExploreScreen} />
+</Tab.Navigator>
+
+IMAGE ANALYSIS FOR MOBILE:
+When user uploads a mobile design screenshot:
+
+1. Identify the screen type:
+   - Login/Signup screen
+   - Dashboard/Home screen
+   - List/Feed view
+   - Detail/Profile screen
+   - Settings screen
+
+2. Analyze layout structure:
+   - Header (back button, title, actions)
+   - Content area (cards, lists, forms)
+   - Bottom navigation (if present)
+   - Safe area insets
+
+3. Extract visual details:
+   - Background color (usually white or light gray)
+   - Card styles (rounded corners, borders, shadows)
+   - Button styles (solid vs outlined, shape)
+   - Typography (sizes, weights, colors)
+   - Spacing between elements
+   - Icon usage
+
+4. Recreate EXACTLY:
+   - Match the layout structure
+   - Use the same colors
+   - Copy button styles precisely
+   - Replicate spacing and padding
+   - Include all visible UI elements
+   - NO gradients unless shown in image
+
+CRITICAL: NO GRADIENT BACKGROUNDS unless explicitly shown in the uploaded image or requested by user.
 
 DEPENDENCIES RULE:
 - @expo/vector-icons is pre-installed (use if needed)
@@ -604,7 +730,8 @@ Description of mobile app
 
 <required_dependencies>
 {
-  "@expo/vector-icons": "14.0.0"
+  "@react-navigation/native": "^6.1.0",
+  "@react-navigation/bottom-tabs": "^6.5.0"
 }
 </required_dependencies>
 
@@ -622,59 +749,7 @@ export function getPromptForProjectType(projectType: 'web' | 'mobile', userMessa
     return basePrompt + '\n\n' + MOBILE_PROMPT_ADDITION;
   }
   
-  // Web project - detect type
-  const isLandingPage = detectLandingPage(userMessage);
-  const isWorkspace = detectWorkspace(userMessage);
-  
-  if (isLandingPage) {
-    return basePrompt + '\n\n' + WEB_MARKETING_PATTERNS;
-  } else if (isWorkspace) {
-    return basePrompt + '\n\n' + WEB_WORKSPACE_PATTERNS;
-  }
-  
-  // Default to workspace style for web
-  return basePrompt + '\n\n' + WEB_WORKSPACE_PATTERNS;
-}
-
-// Detection helpers
-function detectLandingPage(message: string): boolean {
-  const keywords = [
-    'landing page',
-    'homepage',
-    'marketing site',
-    'portfolio',
-    'business website',
-    'company site',
-    'saas homepage',
-    'product page',
-    'coming soon',
-    'hero section',
-    'pricing page',
-    'feature showcase',
-  ];
-  
-  const lower = message.toLowerCase();
-  return keywords.some(keyword => lower.includes(keyword));
-}
-
-function detectWorkspace(message: string): boolean {
-  const keywords = [
-    'dashboard',
-    'admin panel',
-    'workspace',
-    'crm',
-    'project management',
-    'task manager',
-    'data table',
-    'analytics',
-    'user management',
-    'settings page',
-    'profile settings',
-    'kanban',
-    'todo app',
-    'expense tracker',
-  ];
-  
-  const lower = message.toLowerCase();
-  return keywords.some(keyword => lower.includes(keyword));
+  // Web project - return base prompt only
+  // The AI will adapt based on context naturally
+  return basePrompt;
 }

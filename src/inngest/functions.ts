@@ -52,7 +52,7 @@ export const codeAgentFunction = inngest.createFunction(
     const projectType = (project?.projectType as "web" | "mobile") || "web";
     const isMobile = projectType === "mobile";
 
-    console.log(`🎯 Project type: ${projectType}, isMobile: ${isMobile}`);
+    console.log(`🎯 Building ${projectType} project with flexible design principles`);
 
     // Only create E2B sandbox for web projects
     const sandboxId = !isMobile ? await step.run("get-sandbox-id", async () => {
@@ -130,36 +130,16 @@ export const codeAgentFunction = inngest.createFunction(
       },
     );
 
-    // 🎯 NEW: Pass user message for smart prompt detection
+    // Get smart prompt based on project type and user message
     const userMessage = event.data.value;
     const systemPrompt = getPromptForProjectType(projectType, userMessage);
-    
-    // Log which style is being used
-    if (projectType === 'web') {
-      const isLandingPage = userMessage.toLowerCase().includes('landing') || 
-                           userMessage.toLowerCase().includes('homepage') ||
-                           userMessage.toLowerCase().includes('marketing');
-      const isDashboard = userMessage.toLowerCase().includes('dashboard') || 
-                         userMessage.toLowerCase().includes('admin') ||
-                         userMessage.toLowerCase().includes('workspace');
-      
-      if (isLandingPage) {
-        console.log('🎨 Using MARKETING/LANDING PAGE patterns (gradients, flashy)');
-      } else if (isDashboard) {
-        console.log('💼 Using WORKSPACE/DASHBOARD patterns (professional, neutral)');
-      } else {
-        console.log('💼 Using default WORKSPACE patterns');
-      }
-    } else {
-      console.log('📱 Using MOBILE patterns (clean, no gradients)');
-    }
 
     const codeAgent = createAgent<AgentState>({
       name: isMobile ? "mobile-code-agent" : "code-agent",
       description: isMobile ? "An expert mobile app coding agent" : "An expert coding agent",
       system: systemPrompt,
       model: openai({ 
-        model: "gpt-4o", // Changed from gpt-4.1 to support vision
+        model: "gpt-4o",
         defaultParameters: {
           temperature: 0.1, 
         }, 
