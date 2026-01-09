@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Sandbox } from "@e2b/code-interpreter"; 
 import { openai, createAgent, createTool, createNetwork, type Tool, type Message, createState } from "@inngest/agent-kit"; 
 
-import { FRAGMENT_TITLE_PROMPT, RESPONSE_PROMPT, getPromptForProjectType } from "@/prompt";
+import { FRAGMENT_TITLE_PROMPT, PROMPT, RESPONSE_PROMPT, getPromptForProjectType } from "@/prompt";
 import { prisma } from "@/lib/db"; 
 
 import { inngest } from "./client";
@@ -52,7 +52,7 @@ export const codeAgentFunction = inngest.createFunction(
     const projectType = (project?.projectType as "web" | "mobile") || "web";
     const isMobile = projectType === "mobile";
 
-    console.log(`🎯 Building ${projectType} project with flexible design principles`);
+    console.log(`🎯 Project type: ${projectType}, isMobile: ${isMobile}`);
 
     // Only create E2B sandbox for web projects
     const sandboxId = !isMobile ? await step.run("get-sandbox-id", async () => {
@@ -130,16 +130,17 @@ export const codeAgentFunction = inngest.createFunction(
       },
     );
 
-    // Get smart prompt based on project type and user message
-    const userMessage = event.data.value;
-    const systemPrompt = getPromptForProjectType(projectType, userMessage);
+    // Use correct prompt based on project type
+    const systemPrompt = getPromptForProjectType(projectType);
+    
+    console.log(`📝 Using ${isMobile ? 'MOBILE' : 'WEB'} prompt`);
 
     const codeAgent = createAgent<AgentState>({
       name: isMobile ? "mobile-code-agent" : "code-agent",
       description: isMobile ? "An expert mobile app coding agent" : "An expert coding agent",
       system: systemPrompt,
       model: openai({ 
-        model: "gpt-4o",
+        model: "gpt-4o", // Changed from gpt-4.1 to support vision
         defaultParameters: {
           temperature: 0.1, 
         }, 
@@ -371,7 +372,7 @@ export const codeAgentFunction = inngest.createFunction(
               sandboxUrl: sandboxUrl,
               title: parseAgentOutput(fragmentTitleOutput),
               files: result.state.data.files,
-              dependencies: dependencies || undefined, // Save dependencies for mobile
+              dependencies: dependencies || undefined, // NEW: Save dependencies
             }
           }
         },
