@@ -45,18 +45,78 @@ export const ProjectForm = () => {
   const clerk = useClerk();
   const queryClient = useQueryClient();
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
-  const [projectType, setProjectType] = useState<ProjectType>("web"); // NEW
-  
-  // Debug effect
+  const [projectType, setProjectType] = useState<ProjectType>("web");
+
   useEffect(() => {
-    console.log("🔍 Current attachments state:", attachments);
-    console.log("🔍 Attachments length:", attachments.length);
+    console.log("🔎 Current attachments state:", attachments);
+    console.log("🔎 Attachments length:", attachments.length);
     if (attachments.length > 0) {
       attachments.forEach((att, idx) => {
         console.log(`  [${idx}] ${att.name} - ${att.type} - ${att.url}`);
       });
     }
   }, [attachments]);
+
+  // ✅ UPDATED: ImportID Pattern - Production Ready
+  useEffect(() => {
+    const checkForPluginExport = async () => {
+      try {
+        // Check if URL has importId parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const importId = urlParams.get('importId');
+
+        if (!importId) {
+          console.log('ℹ️ No importId in URL');
+          return;
+        }
+
+        console.log('🔍 Checking for plugin export with importId:', importId);
+
+        const res = await fetch(`/api/figma/plugin-import?importId=${importId}`, {
+          method: 'GET',
+          credentials: 'include' // Important for Clerk auth
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.attachments) {
+            console.log('🎨 Loading plugin export:', data.attachments.length, 'frames');
+            setAttachments(prev => [...prev, ...data.attachments]);
+            toast.success(`Loaded ${data.attachments.length} frame(s) from Figma plugin!`);
+
+            // Clean URL after successful import
+            window.history.replaceState({}, '', '/');
+          }
+        } else if (res.status === 404) {
+          console.log('ℹ️ Import not found or expired');
+          toast.error('Import not found or expired. Please try again.');
+          window.history.replaceState({}, '', '/');
+        } else if (res.status === 401) {
+          console.log('⚠️ Not authenticated - keeping importId in URL for after login');
+          // Don't clean URL - user needs to log in first
+        } else {
+          console.error('Error fetching export:', res.status);
+          toast.error('Failed to load import');
+          window.history.replaceState({}, '', '/');
+        }
+      } catch (error) {
+        console.error('Error loading plugin export:', error);
+      }
+    };
+
+    // Check on mount
+    checkForPluginExport();
+
+    // Also check when window gains focus (in case user logged in)
+    const handleFocus = () => {
+      checkForPluginExport();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
 
   const [isUploading, setIsUploading] = useState(false);
   const { startUpload } = useUploadThing("messageAttachment");
@@ -81,45 +141,45 @@ export const ProjectForm = () => {
     console.log("📤 Starting upload for files:", files.map(f => ({ name: f.name, type: f.type, size: f.size })));
     setIsUploading(true);
     toast.loading(`Uploading ${files.length} file(s)...`, { id: "upload" });
-    
+
     try {
-        const uploadedFiles = await startUpload(files);
-        console.log("✅ Upload complete:", uploadedFiles);
-        console.log("✅ Upload complete - full response:", JSON.stringify(uploadedFiles, null, 2));
-        
-        if (uploadedFiles && uploadedFiles.length > 0) {
-            const newAttachments: FileAttachment[] = uploadedFiles.map((uploadedFile, index) => {
-                const originalFile = files[index];
-                const attachment = {
-                    url: uploadedFile.url,
-                    name: originalFile.name,
-                    size: originalFile.size,
-                    type: originalFile.type || uploadedFile.type || 'application/octet-stream',
-                };
-                console.log(`🔎 Creating attachment [${index}]:`, attachment);
-                return attachment;
-            });
-            
-            console.log("🔎 New attachments array:", newAttachments);
-            setAttachments(prev => {
-                const updated = [...prev, ...newAttachments];
-                console.log("📋 Updated attachments state:", updated);
-                console.log("📋 Updated attachments length:", updated.length);
-                return updated;
-            });
-            toast.success(`${files.length} file(s) uploaded successfully`, { id: "upload" });
-        } else {
-            console.error("❌ No files returned from upload or empty array");
-            console.error("❌ Upload response:", uploadedFiles);
-            toast.error("Upload failed - no files returned", { id: "upload" });
-        }
+      const uploadedFiles = await startUpload(files);
+      console.log("✅ Upload complete:", uploadedFiles);
+      console.log("✅ Upload complete - full response:", JSON.stringify(uploadedFiles, null, 2));
+
+      if (uploadedFiles && uploadedFiles.length > 0) {
+        const newAttachments: FileAttachment[] = uploadedFiles.map((uploadedFile, index) => {
+          const originalFile = files[index];
+          const attachment = {
+            url: uploadedFile.url,
+            name: originalFile.name,
+            size: originalFile.size,
+            type: originalFile.type || uploadedFile.type || 'application/octet-stream',
+          };
+          console.log(`🔎 Creating attachment [${index}]:`, attachment);
+          return attachment;
+        });
+
+        console.log("🔎 New attachments array:", newAttachments);
+        setAttachments(prev => {
+          const updated = [...prev, ...newAttachments];
+          console.log("📋 Updated attachments state:", updated);
+          console.log("📋 Updated attachments length:", updated.length);
+          return updated;
+        });
+        toast.success(`${files.length} file(s) uploaded successfully`, { id: "upload" });
+      } else {
+        console.error("❌ No files returned from upload or empty array");
+        console.error("❌ Upload response:", uploadedFiles);
+        toast.error("Upload failed - no files returned", { id: "upload" });
+      }
     } catch (error) {
-        console.error("❌ Upload error:", error);
-        console.error("❌ Upload error details:", JSON.stringify(error, null, 2));
-        toast.error("Failed to upload files", { id: "upload" });
+      console.error("❌ Upload error:", error);
+      console.error("❌ Upload error details:", JSON.stringify(error, null, 2));
+      toast.error("Failed to upload files", { id: "upload" });
     } finally {
-        setIsUploading(false);
-        e.target.value = "";
+      setIsUploading(false);
+      e.target.value = "";
     }
   };
 
@@ -144,6 +204,21 @@ export const ProjectForm = () => {
     toast.success("File removed");
   };
 
+  const handleFigmaImport = (frameImages: Array<{ url: string; name: string }>) => {
+    console.log('🎨 Figma frames imported:', frameImages);
+
+    const imageAttachments: FileAttachment[] = frameImages.map(frame => ({
+      url: frame.url,
+      name: frame.name,
+      size: 0,
+      type: 'image/png'
+    }));
+
+    setAttachments(prev => [...prev, ...imageAttachments]);
+
+    toast.success(`Imported ${frameImages.length} frame(s) from Figma!`);
+  };
+
   const createProject = useMutation(trpc.projects.create.mutationOptions({
     onSuccess: (data) => {
       queryClient.invalidateQueries(trpc.projects.getMany.queryOptions());
@@ -158,9 +233,9 @@ export const ProjectForm = () => {
   }));
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    await createProject.mutateAsync({ 
+    await createProject.mutateAsync({
       value: values.value,
-      projectType, // NEW: Send project type
+      projectType,
       attachments: attachments.length > 0 ? attachments : undefined,
     });
   };
@@ -187,10 +262,9 @@ export const ProjectForm = () => {
           }}
           className="relative w-full transition-all"
         >
-          {/* File Attachments Preview - ABOVE textarea like Lovable */}
+          {/* File Attachments Preview */}
           {attachments.length > 0 && (
             <div className="mb-3 flex gap-2 flex-wrap" data-testid="attachments-preview">
-              {/* Debug: Show attachment count */}
               {process.env.NODE_ENV === 'development' && (
                 <div className="text-xs text-gray-400 mb-1 w-full">
                   Debug: {attachments.length} attachment(s) loaded
@@ -199,22 +273,21 @@ export const ProjectForm = () => {
               {attachments.map((file, index) => {
                 const isImage = file.type?.startsWith('image/') ?? false;
                 const uniqueKey = `${file.url}-${index}`;
-                
+
                 console.log(`🎨 Rendering preview for [${index}]:`, {
                   name: file.name,
                   type: file.type,
                   url: file.url,
                   isImage
                 });
-                
+
                 return (
                   <div key={uniqueKey} className="relative group">
                     {isImage ? (
-                      <div 
+                      <div
                         className="relative rounded-lg overflow-hidden border-2 border-white/10 bg-gray-800"
                         style={{ width: '80px', height: '80px', position: 'relative' }}
                       >
-                        {/* Using regular img tag for external UploadThing URLs - Next.js Image has issues with external domains */}
                         <img
                           src={file.url}
                           alt={file.name}
@@ -237,7 +310,7 @@ export const ProjectForm = () => {
                         </button>
                       </div>
                     ) : (
-                      <div 
+                      <div
                         className="relative flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-white/10 bg-white/5 p-2"
                         style={{ width: '80px', height: '80px' }}
                       >
@@ -298,7 +371,6 @@ export const ProjectForm = () => {
 
           <div className="flex gap-x-2 items-end justify-between pt-3">
             <div className="flex items-center gap-3">
-              {/* Project Type Selector - NEW */}
               <ProjectTypeSelector
                 value={projectType}
                 onChange={setProjectType}
@@ -356,7 +428,9 @@ export const ProjectForm = () => {
                     disabled={isUploading || isPending}
                     className="hidden"
                   />
-                  <DropdownMenuItem 
+                  {/* Figma Import - Pass handleFigmaImport callback */}
+                  <FigmaImportMenuItem onImport={handleFigmaImport} />
+                  <DropdownMenuItem
                     onSelect={(e) => {
                       e.preventDefault();
                       triggerFileInput('image');
@@ -365,7 +439,7 @@ export const ProjectForm = () => {
                     <ImageIcon className="size-4" />
                     <span>Upload Images</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onSelect={(e) => {
                       e.preventDefault();
                       triggerFileInput('video');
@@ -374,7 +448,7 @@ export const ProjectForm = () => {
                     <VideoIcon className="size-4" />
                     <span>Upload Videos</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onSelect={(e) => {
                       e.preventDefault();
                       triggerFileInput('pdf');
@@ -435,3 +509,25 @@ export const ProjectForm = () => {
     </Form>
   );
 };
+
+function FigmaImportMenuItem({
+  onImport
+}: {
+  onImport: (frames: Array<{ url: string; name: string }>) => void
+}) {
+  return (
+    <DropdownMenuItem onSelect={(e) => {
+      e.preventDefault();
+      window.open('https://www.figma.com/community/plugin/1596374731224642349', '_blank');
+    }}>
+      <svg className="size-4" viewBox="0 0 38 57" fill="none">
+        <path d="M19 28.5C19 23.2533 23.2533 19 28.5 19C33.7467 19 38 23.2533 38 28.5C38 33.7467 33.7467 38 28.5 38C23.2533 38 19 33.7467 19 28.5Z" fill="#1ABCFE" />
+        <path d="M0 47.5C0 42.2533 4.25329 38 9.5 38H19V47.5C19 52.7467 14.7467 57 9.5 57C4.25329 57 0 52.7467 0 47.5Z" fill="#0ACF83" />
+        <path d="M19 0V19H28.5C33.7467 19 38 14.7467 38 9.5C38 4.25329 33.7467 0 28.5 0H19Z" fill="#FF7262" />
+        <path d="M0 9.5C0 14.7467 4.25329 19 9.5 19H19V0H9.5C4.25329 0 0 4.25329 0 9.5Z" fill="#F24E1E" />
+        <path d="M0 28.5C0 33.7467 4.25329 38 9.5 38H19V19H9.5C4.25329 19 0 23.2533 0 28.5Z" fill="#A259FF" />
+      </svg>
+      <span>Import from Figma</span>
+    </DropdownMenuItem>
+  );
+}

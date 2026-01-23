@@ -6,6 +6,7 @@ import { inngest } from "@/inngest/client";
 import { protectedProcedure, createTRPCRouter } from "@/trpc/init"; 
 import { TRPCError } from "@trpc/server";
 import { consumeCredits } from "@/lib/usage";
+import type { FigmaImportResult } from "@/lib/figma/types";
 
 const fileAttachmentSchema = z.object({
   url: z.string(),
@@ -52,8 +53,9 @@ export const projectsRouter = createTRPCRouter ({
             value: z.string() 
             .min(1, {message: "Value is required "})
             .max(1000, {message: "Value is required "}),
-            projectType: z.enum(["web", "mobile"]).default("web"), // NEW: Add projectType
+            projectType: z.enum(["web", "mobile"]).default("web"),
             attachments: z.array(fileAttachmentSchema).optional(),
+            figmaData: z.custom<FigmaImportResult>().optional(),
         }), 
       )
       .mutation(async ({ input, ctx }) => {
@@ -95,6 +97,7 @@ export const projectsRouter = createTRPCRouter ({
                 value: input.value,
                 projectId: createdProject.id,
                 attachments: input.attachments,
+                figmaData: input.figmaData,
             }
         });
         
