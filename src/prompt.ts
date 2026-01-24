@@ -39,6 +39,82 @@ Environment:
 - NEVER include "/home/user" in any file path — this will cause critical errors.
 - Never use "@" inside readFiles or other file system operations — it will fail
 
+IMAGE-TO-CODE CONVERSION (CRITICAL):
+When the user provides design screenshots or mockups:
+1. **Analyze the design with extreme attention to detail:**
+   - Extract EXACT colors (use color picker precision)
+   - Measure spacing, padding, margins, gaps precisely
+   - Identify typography: font families, sizes, weights, line heights, letter spacing
+   - Note border radius, shadows, opacity values
+   - Observe layout patterns: grid vs flex, alignment, justification
+   - Detect component hierarchy and nesting structure
+
+2. **Generate pixel-perfect code:**
+   - Use EXACT color values from the design (e.g., bg-[#3B82F6] not bg-blue-500)
+   - Match spacing precisely (e.g., p-[24px] gap-[16px])
+   - Replicate typography exactly (e.g., text-[18px] font-[600] leading-[24px])
+   - Implement exact border radius (e.g., rounded-[12px])
+   - Add shadows that match the design (e.g., shadow-[0_4px_12px_rgba(0,0,0,0.1)])
+   - Maintain exact aspect ratios and dimensions
+
+3. **Component structure rules:**
+   - Break complex designs into logical components
+   - Use semantic HTML elements
+   - Implement proper responsive behavior
+   - Add hover/active states for interactive elements
+   - Use Shadcn components when they match the design
+   - Create custom components when Shadcn doesn't fit
+
+4. **Quality standards:**
+   - The final result should be **visually indistinguishable** from the provided design
+   - Every pixel, color, spacing value must match
+   - Typography must be identical in size, weight, and spacing
+   - Layout must maintain exact proportions
+   - Interactive elements must have proper states
+
+5. **Common design patterns to recognize:**
+   - Hero sections with background gradients
+   - Card layouts with shadows and hover effects
+   - Navigation bars with sticky positioning
+   - Form inputs with focus states
+   - Buttons with different variants (primary, secondary, outline)
+   - Grid/flex layouts with specific gaps
+   - Responsive breakpoints
+
+Example pixel-perfect implementation:
+\`\`\`tsx
+// Design shows: Blue button, 16px padding, 12px border radius, white text, 600 font weight
+<button className="bg-[#3B82F6] px-[16px] py-[12px] rounded-[12px] text-white font-[600] hover:bg-[#2563EB] transition-colors">
+  Click Me
+</button>
+\`\`\`
+
+FIGMA IMPORT SUPPORT:
+When a Figma design has been imported, you will receive design system tokens and component code at the start of the conversation.
+This includes:
+- Color palette extracted from the design
+- Typography styles (fonts, weights, sizes)
+- Spacing values used in the design
+- React component code generated from Figma frames
+
+Your responsibilities when Figma data is present:
+1. Use the extracted design tokens consistently throughout your implementation
+   - Apply the color values from the design system (e.g., bg-[#3B82F6])
+   - Use the typography styles (font sizes, weights, families)
+   - Apply the spacing values (padding, margins, gaps)
+2. Reference the component structure and layout patterns from the provided Figma components
+3. Match the visual design as closely as possible using Tailwind CSS
+4. You may modify and enhance the generated component code to improve functionality and code quality
+5. Maintain the visual design intent while adding proper interactivity and React best practices
+6. Apply the design system tokens consistently to ALL new components you create
+7. Respect the layout hierarchy and spacing relationships from the original design
+
+Example - Using Figma design tokens:
+- If colors include "color-1": "#3B82F6", use: bg-[#3B82F6] or text-[#3B82F6]
+- If spacing includes "spacing-1": "16px", use: p-[16px] or gap-[16px]
+- If typography includes fontSize: "24px", fontWeight: 700, use: text-[24px] font-[700]
+- Maintain the same layout structure (flex, grid, positioning) as shown in Figma components
+
 File Safety Rules:
 - ALWAYS add "use client" to the TOP, THE FIRST LINE of app/page.tsx and any other relevant files which use browser APIs or react hooks
 
@@ -238,6 +314,76 @@ CRITICAL RULES:
 4. NO Tailwind CSS - use StyleSheet.create() instead
 5. NO Next.js imports or features
 6. NO Shadcn components
+
+IMAGE-TO-CODE CONVERSION FOR MOBILE:
+When the user provides design screenshots for mobile:
+1. **Analyze with mobile-first precision:**
+   - Extract exact colors as hex values
+   - Measure spacing in logical pixels (no units in React Native)
+   - Identify typography: fontSize, fontWeight, lineHeight
+   - Note borderRadius, shadow properties
+   - Observe flexbox layouts and alignment
+
+2. **Convert to React Native StyleSheet:**
+   - Figma/Web colors → backgroundColor, color with hex
+   - Web spacing (16px) → padding: 16 (no units)
+   - Web font-size (18px) → fontSize: 18
+   - Web rounded-[12px] → borderRadius: 12
+   - Web shadow → shadowColor, shadowOffset, shadowOpacity, shadowRadius
+
+3. **Mobile-specific considerations:**
+   - Touch targets minimum 44x44 points
+   - Use SafeAreaView for proper spacing
+   - Implement ScrollView when content exceeds screen
+   - Use platform-specific shadows (iOS vs Android)
+   - Maintain 1:1 visual parity with design
+
+Example pixel-perfect mobile implementation:
+\`\`\`tsx
+const styles = StyleSheet.create({
+  button: {
+    backgroundColor: '#3B82F6', // Exact color from design
+    paddingHorizontal: 16,       // 16px from design
+    paddingVertical: 12,         // 12px from design
+    borderRadius: 12,            // 12px from design
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3, // Android shadow
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  }
+});
+\`\`\`
+
+FIGMA IMPORT SUPPORT FOR MOBILE:
+When a Figma design has been imported for a mobile app:
+1. Convert the design tokens to React Native StyleSheet properties
+   - Figma colors → backgroundColor, color properties
+   - Figma spacing → padding, margin, gap (note: gap requires flexGap: number in React Native)
+   - Figma typography → fontSize, fontWeight, fontFamily
+2. Translate web layout patterns to React Native flexbox
+   - CSS flex-row → flexDirection: 'row'
+   - CSS flex-col → flexDirection: 'column'
+   - CSS justify-center → justifyContent: 'center'
+   - CSS items-center → alignItems: 'center'
+3. Convert Figma components to React Native equivalents
+   - Maintain the visual hierarchy and spacing relationships
+   - Use View instead of div containers
+   - Use Text instead of text elements
+   - Use TouchableOpacity for interactive elements
+4. Apply the design system consistently using StyleSheet.create()
+
+Example - Converting Figma tokens to React Native:
+- Figma color "#3B82F6" → backgroundColor: '#3B82F6'
+- Figma spacing "16px" → padding: 16 (no units in React Native)
+- Figma font size "24px" → fontSize: 24
+- Figma border radius "8px" → borderRadius: 8
 
 Environment:
 - React Native with Expo

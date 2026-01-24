@@ -1,17 +1,18 @@
-import { z } from "zod"; 
-import { Sandbox } from "@e2b/code-interpreter"; 
-import { openai, createAgent, createTool, createNetwork, type Tool, type Message, createState } from "@inngest/agent-kit"; 
+import { z } from "zod";
+import { Sandbox } from "@e2b/code-interpreter";
+import { openai, createAgent, createTool, createNetwork, type Tool, type Message, createState } from "@inngest/agent-kit";
 
-import { FRAGMENT_TITLE_PROMPT, PROMPT, RESPONSE_PROMPT, getPromptForProjectType } from "@/prompt";
-import { prisma } from "@/lib/db"; 
+import { FRAGMENT_TITLE_PROMPT, RESPONSE_PROMPT, getPromptForProjectType } from "@/prompt";
+import { prisma } from "@/lib/db";
 
 import { inngest } from "./client";
 import { getSandbox, lastAssistantTextMessageContent, parseAgentOutput } from "./utils";
-import { SANDBOX_TIMEOUT } from "./types"; 
+import { SANDBOX_TIMEOUT } from "./types";
+import type { FigmaImportResult } from "@/lib/figma/types";
 
 interface AgentState {
   summary: string;
-  files: { [path: string]: string }; 
+  files: { [path: string]: string };
 }
 
 /**
@@ -25,10 +26,10 @@ function extractDependencies(summary: string): Record<string, string> {
       console.log('⚠️ No dependencies found in summary');
       return {};
     }
-    
+
     const depsJson = match[1].trim();
     const dependencies = JSON.parse(depsJson);
-    
+
     console.log('📦 Extracted dependencies:', dependencies);
     return dependencies;
   } catch (error) {
@@ -41,6 +42,9 @@ export const codeAgentFunction = inngest.createFunction(
   { id: "code-agent" },
   { event: "code-agent/run" },
   async ({ event, step }) => {
+    // Get Figma data if present
+    const figmaData = event.data.figmaData as FigmaImportResult | undefined;
+
     // Get project type from database
     const project = await step.run("get-project", async () => {
       return await prisma.project.findUnique({
@@ -53,16 +57,50 @@ export const codeAgentFunction = inngest.createFunction(
     const isMobile = projectType === "mobile";
 
     console.log(`🎯 Project type: ${projectType}, isMobile: ${isMobile}`);
+    if (figmaData) {
+      console.log(`🎨 Figma data present: ${figmaData.fileName}`);
+    }
 
     // Only create E2B sandbox for web projects
     const sandboxId = !isMobile ? await step.run("get-sandbox-id", async () => {
-      const sandbox = await Sandbox.create("slide-nextjs-test-1"); 
+      const sandbox = await Sandbox.create("slide-nextjs-test-1");
       await sandbox.setTimeout(SANDBOX_TIMEOUT);
-      return sandbox.sandboxId; 
+      return sandbox.sandboxId;
     }) : null;
 
     const previousMessages = await step.run("get-previous-messages", async () => {
       const formattedMessages: Message[] = [];
+
+      // Add Figma context as first message if present
+      if (figmaData) {
+        const figmaContext = `
+FIGMA DESIGN IMPORTED:
+File: ${figmaData.fileName}
+
+Design System Tokens:
+Colors: ${JSON.stringify(figmaData.designSystem.colors, null, 2)}
+Typography: ${JSON.stringify(figmaData.designSystem.typography, null, 2)}
+Spacing: ${JSON.stringify(figmaData.designSystem.spacing, null, 2)}
+
+Tailwind Config:
+${JSON.stringify(figmaData.tailwindConfig, null, 2)}
+
+Component Files Extracted:
+${Object.keys(figmaData.components).map(name => `- ${name}`).join('\n')}
+
+Component Code Reference:
+${Object.entries(figmaData.components).map(([name, code]) => `
+=== ${name} ===
+${code}
+`).join('\n')}
+        `.trim();
+
+        formattedMessages.push({
+          type: "text",
+          role: "user",
+          content: figmaContext,
+        });
+      }
 
       const messages = await prisma.message.findMany({
         where: {
@@ -89,20 +127,20 @@ export const codeAgentFunction = inngest.createFunction(
         if (imageUrls.length > 0) {
           // Message with images - format for GPT-4 vision
           console.log(`📸 Message ${message.id} has ${imageUrls.length} image(s)`);
-          
+
           formattedMessages.push({
             type: "text",
             role: message.role === "ASSISTANT" ? "assistant" : "user",
             content: [
-              { 
-                type: "text", 
-                text: message.content 
+              {
+                type: "text",
+                text: message.content
               },
               ...imageUrls.map(url => ({
                 type: "image_url" as const,
-                image_url: { 
+                image_url: {
                   url,
-                  detail: "high" as const // Use "high" for better image analysis
+                  detail: "high" as const
                 }
               }))
             ]
@@ -123,7 +161,7 @@ export const codeAgentFunction = inngest.createFunction(
     const state = createState<AgentState>(
       {
         summary: "",
-        files: {}, 
+        files: {},
       },
       {
         messages: previousMessages,
@@ -132,34 +170,34 @@ export const codeAgentFunction = inngest.createFunction(
 
     // Use correct prompt based on project type
     const systemPrompt = getPromptForProjectType(projectType);
-    
+
     console.log(`📝 Using ${isMobile ? 'MOBILE' : 'WEB'} prompt`);
 
     const codeAgent = createAgent<AgentState>({
       name: isMobile ? "mobile-code-agent" : "code-agent",
       description: isMobile ? "An expert mobile app coding agent" : "An expert coding agent",
       system: systemPrompt,
-      model: openai({ 
-        model: "gpt-4o", // Changed from gpt-4.1 to support vision
+      model: openai({
+        model: "gpt-4o",
         defaultParameters: {
-          temperature: 0.1, 
-        }, 
+          temperature: 0.1,
+        },
       }),
       tools: isMobile ? [
         // Mobile: Only file creation (no E2B sandbox)
         createTool({
-          name: "createOrUpdateFiles", 
-          description: "Create or update React Native files for the mobile app", 
+          name: "createOrUpdateFiles",
+          description: "Create or update React Native files for the mobile app",
           parameters: z.object({
             files: z.array(
               z.object({
-                path: z.string(), 
-                content: z.string(), 
+                path: z.string(),
+                content: z.string(),
               }),
             ),
           }),
           handler: async (
-            { files }, 
+            { files },
             { step, network }: Tool.Options<AgentState>
           ) => {
             const updatedFiles = await step?.run("createOrUpdateFiles", async () => {
@@ -170,7 +208,7 @@ export const codeAgentFunction = inngest.createFunction(
               }
               return currentFiles;
             });
-            
+
             // CRITICAL: Update the network state with the new files
             if (updatedFiles && typeof updatedFiles === "object") {
               network.state.data.files = updatedFiles;
@@ -180,14 +218,14 @@ export const codeAgentFunction = inngest.createFunction(
       ] : [
         // Web: Full E2B tools (terminal, file operations)
         createTool({
-          name: "terminal", 
-          description: "Use the terminal to run commands", 
+          name: "terminal",
+          description: "Use the terminal to run commands",
           parameters: z.object({
             command: z.string(),
           }),
           handler: async ({ command }, { step }) => {
             return await step?.run("terminal", async () => {
-              const buffers = { stdout: "", stderr: ""};
+              const buffers = { stdout: "", stderr: "" };
 
               try {
                 const sandbox = await getSandbox(sandboxId!);
@@ -201,7 +239,7 @@ export const codeAgentFunction = inngest.createFunction(
                 });
                 return result.stdout;
               } catch (e) {
-                console.error( 
+                console.error(
                   `Command failed: ${e} \nstdout: ${buffers.stdout}\nstderr: ${buffers.stderr}`,
                 );
                 return `Command failed: ${e} \nstdout: ${buffers.stdout}\nstderr: ${buffers.stderr}`;
@@ -210,28 +248,28 @@ export const codeAgentFunction = inngest.createFunction(
           },
         }),
         createTool({
-          name: "createOrUpdateFiles", 
-          description: "Create or update files in the Next.js sandbox", 
+          name: "createOrUpdateFiles",
+          description: "Create or update files in the Next.js sandbox",
           parameters: z.object({
             files: z.array(
               z.object({
-                path: z.string(), 
-                content: z.string(), 
+                path: z.string(),
+                content: z.string(),
               }),
             ),
           }),
           handler: async (
-            { files }, 
-            { step, network}: Tool.Options<AgentState>
-          ) =>  {
-            const newFiles = await step?.run("createOrUpdateFiles", async() => {
+            { files },
+            { step, network }: Tool.Options<AgentState>
+          ) => {
+            const newFiles = await step?.run("createOrUpdateFiles", async () => {
               try {
                 const updatedFiles = network.state.data.files || {};
                 const sandbox = await getSandbox(sandboxId!);
                 for (const file of files) {
-                  await sandbox.files.write(file.path, file.content); 
+                  await sandbox.files.write(file.path, file.content);
                   updatedFiles[file.path] = file.content;
-                } 
+                }
 
                 return updatedFiles;
               } catch (e) {
@@ -245,32 +283,32 @@ export const codeAgentFunction = inngest.createFunction(
           }
         }),
         createTool({
-          name: "readFiles", 
-          description: "Read files from the Next.js sandbox", 
+          name: "readFiles",
+          description: "Read files from the Next.js sandbox",
           parameters: z.object({
-            files: z.array(z.string()), 
-          }), 
+            files: z.array(z.string()),
+          }),
           handler: async ({ files }, { step }) => {
             return await step?.run("readFiles", async () => {
               try {
                 const sandbox = await getSandbox(sandboxId!);
                 const contents = [];
                 for (const file of files) {
-                  const content = await sandbox.files.read(file); 
+                  const content = await sandbox.files.read(file);
                   contents.push({ path: file, content });
                 }
                 return JSON.stringify(contents);
               } catch (e) {
                 return "Error: " + e;
               }
-            }) 
+            })
           },
         })
       ],
       lifecycle: {
         onResponse: async ({ result, network }) => {
-          const lastAssistantMessageText = 
-          lastAssistantTextMessageContent(result); 
+          const lastAssistantMessageText =
+            lastAssistantTextMessageContent(result);
 
           if (lastAssistantMessageText && network) {
             if (lastAssistantMessageText.includes("<task_summary>")) {
@@ -280,16 +318,16 @@ export const codeAgentFunction = inngest.createFunction(
 
           return result;
         },
-      }, 
+      },
     });
 
     const network = createNetwork<AgentState>({
-      name: "coding-agent-network", 
+      name: "coding-agent-network",
       agents: [codeAgent],
       maxIter: 15,
       defaultState: state,
       router: async ({ network }) => {
-        const summary = network.state.data.summary; 
+        const summary = network.state.data.summary;
 
         if (summary) {
           return;
@@ -299,14 +337,14 @@ export const codeAgentFunction = inngest.createFunction(
       },
     });
 
-    const result = await network.run(event.data.value, { state }); 
+    const result = await network.run(event.data.value, { state });
 
     const fragmentTitleGenerator = createAgent({
       name: "fragment-title-generator",
       description: "A fragment title generator",
       system: FRAGMENT_TITLE_PROMPT,
-      model: openai({ 
-        model: "gpt-4o", 
+      model: openai({
+        model: "gpt-4o",
       }),
     })
 
@@ -314,33 +352,30 @@ export const codeAgentFunction = inngest.createFunction(
       name: "response-generator",
       description: "A response generator",
       system: RESPONSE_PROMPT,
-      model: openai({ 
-        model: "gpt-4o", 
+      model: openai({
+        model: "gpt-4o",
       }),
     })
 
-    const { 
-      output: fragmentTitleOutput 
+    const {
+      output: fragmentTitleOutput
     } = await fragmentTitleGenerator.run(result.state.data.summary);
-    const { 
-      output: responseOutput 
+    const {
+      output: responseOutput
     } = await responseGenerator.run(result.state.data.summary);
 
-    const isError = 
-      !result.state.data.summary || 
-      Object.keys(result.state.data.files || {}).length === 0; 
+    const isError =
+      !result.state.data.summary ||
+      Object.keys(result.state.data.files || {}).length === 0;
 
     // Get sandbox URL based on project type
     const sandboxUrl = await step.run("get-sandbox-url", async () => {
       if (isMobile) {
-        // For mobile: Just return a marker indicating it's a mobile project
-        // The frontend will create the Snack client-side
         console.log("📱 Mobile project - code will be handled client-side");
         return "mobile-preview://ready";
       } else {
-        // Web project - use E2B sandbox
         console.log("🌐 Creating E2B sandbox URL...");
-        const sandbox = await getSandbox(sandboxId!); 
+        const sandbox = await getSandbox(sandboxId!);
         const host = sandbox.getHost(3000);
         return `https://${host}`;
       }
@@ -351,16 +386,16 @@ export const codeAgentFunction = inngest.createFunction(
         return await prisma.message.create({
           data: {
             projectId: event.data.projectId,
-            content: "something's went wrong. please try again.", 
+            content: "something's went wrong. please try again.",
             role: "ASSISTANT",
-            type: "ERROR", 
-          }, 
+            type: "ERROR",
+          },
         });
       }
-      
+
       // Extract dependencies from summary (for mobile projects)
       const dependencies = isMobile ? extractDependencies(result.state.data.summary) : null;
-      
+
       return await prisma.message.create({
         data: {
           projectId: event.data.projectId,
@@ -372,18 +407,18 @@ export const codeAgentFunction = inngest.createFunction(
               sandboxUrl: sandboxUrl,
               title: parseAgentOutput(fragmentTitleOutput),
               files: result.state.data.files,
-              dependencies: dependencies || undefined, // NEW: Save dependencies
+              dependencies: dependencies || undefined,
             }
           }
         },
       })
     });
- 
-    return { 
+
+    return {
       url: sandboxUrl,
-      title: "Fragment", 
-      files: result.state.data.files, 
-      summary: result.state.data.summary,  
+      title: "Fragment",
+      files: result.state.data.files,
+      summary: result.state.data.summary,
     };
   },
 );
