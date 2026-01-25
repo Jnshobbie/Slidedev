@@ -52,7 +52,7 @@ export const projectsRouter = createTRPCRouter ({
         z.object({
             value: z.string() 
             .min(1, {message: "Value is required "})
-            .max(1000, {message: "Value is required "}),
+            .max(10000, {message: "Value is required "}),
             projectType: z.enum(["web", "mobile"]).default("web"),
             attachments: z.array(fileAttachmentSchema).optional(),
             figmaData: z.custom<FigmaImportResult>().optional(),
@@ -79,7 +79,7 @@ export const projectsRouter = createTRPCRouter ({
             name: generateSlug(2, {
               format: "kebab", 
             }),
-            projectType: input.projectType, // NEW: Save projectType to database
+            projectType: input.projectType, // Save projectType to database
             messages: {
               create: {
                 content: input.value,
