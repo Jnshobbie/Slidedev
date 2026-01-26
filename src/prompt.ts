@@ -240,6 +240,58 @@ File conventions:
 - Components should be using named exports
 - When using Shadcn components, import them from their proper individual file paths (e.g. @/components/ui/input)
 
+PACKAGE.JSON GENERATION (CRITICAL):
+You MUST create a package.json file for every web project with ALL dependencies used.
+
+The package.json MUST include:
+1. All npm packages you imported in the code
+2. Exact versions that work together
+3. Proper Next.js, React, TypeScript versions
+4. All Shadcn UI dependencies (@radix-ui/*, class-variance-authority, etc.)
+5. Development dependencies (TypeScript, Tailwind, ESLint)
+
+Use the createOrUpdateFiles tool to create "package.json" with this structure:
+
+{
+  "name": "generated-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "15.3.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.0.0",
+    "@radix-ui/react-slot": "^1.0.2",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^2.0.0",
+    "lucide-react": "^0.263.1"
+    // ADD ALL OTHER PACKAGES YOU USED
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.4.0",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "15.3.4"
+  }
+}
+
+IMPORTANT: 
+- Always include the EXACT packages you imported
+- Use specific versions, not "latest"
+- Include both dependencies and devDependencies
+- This file is MANDATORY for every web project
+
 Final output (MANDATORY):
 After ALL tool calls are 100% complete and the task is fully finished, respond with exactly the following format and NOTHING else:
 
