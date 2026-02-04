@@ -178,7 +178,7 @@ ${code}
       description: isMobile ? "An expert mobile app coding agent" : "An expert coding agent",
       system: systemPrompt,
       model: openai({
-        model: "gpt-5",
+        model: "gpt-4.5-preview",
         defaultParameters: {
           temperature: 0.1,
         },
@@ -344,7 +344,7 @@ ${code}
       description: "A fragment title generator",
       system: FRAGMENT_TITLE_PROMPT,
       model: openai({
-        model: "gpt-5",
+        model: "gpt-4.5-preview",
       }),
     })
 
@@ -353,7 +353,7 @@ ${code}
       description: "A response generator",
       system: RESPONSE_PROMPT,
       model: openai({
-        model: "gpt-5",
+        model: "gpt-4.5-preview",
       }),
     })
 
