@@ -1,8 +1,14 @@
 import { z } from "zod";
+import { runGPT5Agent, formatMessagesForGPT5, type GPT5AgentContext } from "@/lib/gpt5-agent";
 import { Sandbox } from "@e2b/code-interpreter";
 import { openai, createAgent, createTool, createNetwork, type Tool, type Message, createState } from "@inngest/agent-kit";
 
-import { FRAGMENT_TITLE_PROMPT, RESPONSE_PROMPT, getPromptForProjectType } from "@/prompt";
+import { 
+  FRAGMENT_TITLE_PROMPT, 
+  RESPONSE_PROMPT, 
+  getPromptForProjectType,
+  GPT52_CODE_AGENT_PROMPT 
+} from "@/prompt";
 import { prisma } from "@/lib/db";
 
 import { inngest } from "./client";
@@ -68,12 +74,27 @@ export const codeAgentFunction = inngest.createFunction(
       return sandbox.sandboxId;
     }) : null;
 
-    const previousMessages = await step.run("get-previous-messages", async () => {
-      const formattedMessages: Message[] = [];
+    // Get previous messages from database
+    const dbMessages = await step.run("get-previous-messages", async () => {
+      return await prisma.message.findMany({
+        where: { projectId: event.data.projectId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      });
+    });
 
-      // Add Figma context as first message if present
-      if (figmaData) {
-        const figmaContext = `
+    // Format messages for GPT-5.2 (with images)
+    const gpt5Messages = formatMessagesForGPT5(
+      dbMessages.reverse().map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        attachments: msg.attachments as Array<{ url: string; type: string; name: string; size: number }> | undefined
+      }))
+    );
+
+    // Add Figma context if present
+    if (figmaData) {
+      const figmaContext = `
 FIGMA DESIGN IMPORTED:
 File: ${figmaData.fileName}
 
@@ -93,282 +114,115 @@ ${Object.entries(figmaData.components).map(([name, code]) => `
 === ${name} ===
 ${code}
 `).join('\n')}
-        `.trim();
+      `.trim();
 
-        formattedMessages.push({
-          type: "text",
-          role: "user",
-          content: figmaContext,
-        });
-      }
-
-      const messages = await prisma.message.findMany({
-        where: {
-          projectId: event.data.projectId,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 10,
+      gpt5Messages.unshift({
+        role: 'user',
+        content: figmaContext
       });
+    }
 
-      for (const message of messages) {
-        // Parse attachments from JSON
-        const attachments = message.attachments as Array<{
-          url: string;
-          name: string;
-          size: number;
-          type: string;
-        }> | null;
+    // Add current user message
+    gpt5Messages.push({
+      role: 'user',
+      content: event.data.value
+    });
 
-        // Filter for images only
-        const imageUrls = attachments?.filter(a => a.type.startsWith('image/')).map(a => a.url) || [];
+    // Get the correct prompt for project type
+    const codePrompt = getPromptForProjectType(projectType) + '\n\n' + GPT52_CODE_AGENT_PROMPT;
 
-        if (imageUrls.length > 0) {
-          // Message with images - format for GPT-4 vision
-          console.log(`📸 Message ${message.id} has ${imageUrls.length} image(s)`);
+    console.log(`🚀 Delegating to GPT-5.2 agent (${isMobile ? 'mobile' : 'web'} mode)`);
 
-          formattedMessages.push({
-            type: "text",
-            role: message.role === "ASSISTANT" ? "assistant" : "user",
-            content: [
-              {
-                type: "text",
-                text: message.content
-              },
-              ...imageUrls.map(url => ({
-                type: "image_url" as const,
-                image_url: {
-                  url,
-                  detail: "high" as const
-                }
-              }))
-            ]
-          } as Message);
-        } else {
-          // Regular text message (no images)
-          formattedMessages.push({
-            type: "text",
-            role: message.role === "ASSISTANT" ? "assistant" : "user",
-            content: message.content,
+    // Run GPT-5.2 agent with tool callback
+const gpt5Result = await step.run("run-gpt5-agent", async () => {
+  const currentFiles: Record<string, string> = {}; // ✅ const instead of let
+
+  const result = await runGPT5Agent(
+    {
+      projectType,
+      messages: gpt5Messages,
+      systemPrompt: codePrompt,
+      currentFiles,
+      sandboxId: sandboxId || undefined
+    },
+    // Tool callback - executes tools via Inngest step.run
+    async (toolName: string, args: { files?: Array<{ path: string; content: string }>; command?: string }) => { // ✅ Typed args
+      if (toolName === 'createOrUpdateFiles' && !isMobile && sandboxId) {
+        // Web: Create files in E2B sandbox
+        const sandbox = await getSandbox(sandboxId);
+        if (args.files) {
+          for (const file of args.files) {
+            await sandbox.files.write(file.path, file.content);
+            currentFiles[file.path] = file.content;
+            console.log(`📝 Created file: ${file.path}`);
+          }
+        }
+        return 'Files created successfully';
+      } else if (toolName === 'createOrUpdateFiles' && isMobile) {
+        // Mobile: Store files in memory
+        if (args.files) {
+          for (const file of args.files) {
+            currentFiles[file.path] = file.content;
+            console.log(`📱 Created mobile file: ${file.path}`);
+          }
+        }
+        return 'Files created successfully';
+      } else if (toolName === 'terminal' && sandboxId && args.command) {
+        // Web: Execute terminal command
+        const sandbox = await getSandbox(sandboxId);
+        const buffers = { stdout: '', stderr: '' };
+        try {
+          const result = await sandbox.commands.run(args.command, {
+            onStdout: (data: string) => { buffers.stdout += data; },
+            onStderr: (data: string) => { buffers.stderr += data; }
           });
+          console.log(`💻 Terminal: ${args.command} → ${result.stdout}`);
+          return result.stdout;
+        } catch (e) {
+          console.error(`❌ Terminal error: ${e}`);
+          return `Error: ${e}\nstdout: ${buffers.stdout}\nstderr: ${buffers.stderr}`;
         }
+      } else if (toolName === 'readFiles' && sandboxId && args.files) {
+        // Web: Read files from sandbox
+        const sandbox = await getSandbox(sandboxId);
+        const contents = [];
+        for (const file of args.files) {
+          const content = await sandbox.files.read(file.path);
+          contents.push({ path: file.path, content });
+        }
+        return JSON.stringify(contents);
       }
+      return 'Tool not available';
+    }
+  );
 
-      return formattedMessages.reverse();
-    });
+  return result;
+});
 
-    const state = createState<AgentState>(
-      {
-        summary: "",
-        files: {},
-      },
-      {
-        messages: previousMessages,
-      },
-    );
+    console.log(`✅ GPT-5.2 completed with ${Object.keys(gpt5Result.files).length} files`);
 
-    // Use correct prompt based on project type
-    const systemPrompt = getPromptForProjectType(projectType);
-
-    console.log(`📝 Using ${isMobile ? 'MOBILE' : 'WEB'} prompt`);
-
-    const codeAgent = createAgent<AgentState>({
-      name: isMobile ? "mobile-code-agent" : "code-agent",
-      description: isMobile ? "An expert mobile app coding agent" : "An expert coding agent",
-      system: systemPrompt,
-      model: openai({
-        model: "gpt-4o",
-        defaultParameters: {
-          temperature: 0.1,
-        },
-      }),
-      tools: isMobile ? [
-        // Mobile: Only file creation (no E2B sandbox)
-        createTool({
-          name: "createOrUpdateFiles",
-          description: "Create or update React Native files for the mobile app",
-          parameters: z.object({
-            files: z.array(
-              z.object({
-                path: z.string(),
-                content: z.string(),
-              }),
-            ),
-          }),
-          handler: async (
-            { files },
-            { step, network }: Tool.Options<AgentState>
-          ) => {
-            const updatedFiles = await step?.run("createOrUpdateFiles", async () => {
-              const currentFiles = network.state.data.files || {};
-              for (const file of files) {
-                console.log(`📱 Creating mobile file: ${file.path}`);
-                currentFiles[file.path] = file.content;
-              }
-              return currentFiles;
-            });
-
-            // CRITICAL: Update the network state with the new files
-            if (updatedFiles && typeof updatedFiles === "object") {
-              network.state.data.files = updatedFiles;
-            }
-          }
-        }),
-      ] : [
-        // Web: Full E2B tools (terminal, file operations)
-        createTool({
-          name: "terminal",
-          description: "Use the terminal to run commands",
-          parameters: z.object({
-            command: z.string(),
-          }),
-          handler: async ({ command }, { step }) => {
-            return await step?.run("terminal", async () => {
-              const buffers = { stdout: "", stderr: "" };
-
-              try {
-                const sandbox = await getSandbox(sandboxId!);
-                const result = await sandbox.commands.run(command, {
-                  onStdout: (data: string) => {
-                    buffers.stdout += data;
-                  },
-                  onStderr: (data: string) => {
-                    buffers.stderr += data;
-                  }
-                });
-                return result.stdout;
-              } catch (e) {
-                console.error(
-                  `Command failed: ${e} \nstdout: ${buffers.stdout}\nstderr: ${buffers.stderr}`,
-                );
-                return `Command failed: ${e} \nstdout: ${buffers.stdout}\nstderr: ${buffers.stderr}`;
-              }
-            });
-          },
-        }),
-        createTool({
-          name: "createOrUpdateFiles",
-          description: "Create or update files in the Next.js sandbox",
-          parameters: z.object({
-            files: z.array(
-              z.object({
-                path: z.string(),
-                content: z.string(),
-              }),
-            ),
-          }),
-          handler: async (
-            { files },
-            { step, network }: Tool.Options<AgentState>
-          ) => {
-            const newFiles = await step?.run("createOrUpdateFiles", async () => {
-              try {
-                const updatedFiles = network.state.data.files || {};
-                const sandbox = await getSandbox(sandboxId!);
-                for (const file of files) {
-                  await sandbox.files.write(file.path, file.content);
-                  updatedFiles[file.path] = file.content;
-                }
-
-                return updatedFiles;
-              } catch (e) {
-                return "Error: " + e;
-              }
-            });
-
-            if (typeof newFiles === "object") {
-              network.state.data.files = newFiles;
-            }
-          }
-        }),
-        createTool({
-          name: "readFiles",
-          description: "Read files from the Next.js sandbox",
-          parameters: z.object({
-            files: z.array(z.string()),
-          }),
-          handler: async ({ files }, { step }) => {
-            return await step?.run("readFiles", async () => {
-              try {
-                const sandbox = await getSandbox(sandboxId!);
-                const contents = [];
-                for (const file of files) {
-                  const content = await sandbox.files.read(file);
-                  contents.push({ path: file, content });
-                }
-                return JSON.stringify(contents);
-              } catch (e) {
-                return "Error: " + e;
-              }
-            })
-          },
-        })
-      ],
-      lifecycle: {
-        onResponse: async ({ result, network }) => {
-          const lastAssistantMessageText =
-            lastAssistantTextMessageContent(result);
-
-          if (lastAssistantMessageText && network) {
-            if (lastAssistantMessageText.includes("<task_summary>")) {
-              network.state.data.summary = lastAssistantMessageText;
-            }
-          }
-
-          return result;
-        },
-      },
-    });
-
-    const network = createNetwork<AgentState>({
-      name: "coding-agent-network",
-      agents: [codeAgent],
-      maxIter: 15,
-      defaultState: state,
-      router: async ({ network }) => {
-        const summary = network.state.data.summary;
-
-        if (summary) {
-          return;
-        }
-
-        return codeAgent;
-      },
-    });
-
-    const result = await network.run(event.data.value, { state });
-
+    // Generate fragment title
     const fragmentTitleGenerator = createAgent({
       name: "fragment-title-generator",
       description: "A fragment title generator",
       system: FRAGMENT_TITLE_PROMPT,
-      model: openai({
-        model: "gpt-4o",
-      }),
-    })
+      model: openai({ model: "gpt-4o" }),
+    });
 
+    // Generate user-facing response
     const responseGenerator = createAgent({
       name: "response-generator",
       description: "A response generator",
       system: RESPONSE_PROMPT,
-      model: openai({
-        model: "gpt-4o",
-      }),
-    })
+      model: openai({ model: "gpt-4o" }),
+    });
 
-    const {
-      output: fragmentTitleOutput
-    } = await fragmentTitleGenerator.run(result.state.data.summary);
-    const {
-      output: responseOutput
-    } = await responseGenerator.run(result.state.data.summary);
+    const { output: fragmentTitleOutput } = await fragmentTitleGenerator.run(gpt5Result.summary);
+    const { output: responseOutput } = await responseGenerator.run(gpt5Result.summary);
 
-    const isError =
-      !result.state.data.summary ||
-      Object.keys(result.state.data.files || {}).length === 0;
+    const isError = !gpt5Result.summary || Object.keys(gpt5Result.files || {}).length === 0;
 
-    // Get sandbox URL based on project type
+    // Get sandbox URL
     const sandboxUrl = await step.run("get-sandbox-url", async () => {
       if (isMobile) {
         console.log("📱 Mobile project - code will be handled client-side");
@@ -381,6 +235,7 @@ ${code}
       }
     });
 
+    // Save to database
     await step.run("save-result", async () => {
       if (isError) {
         return await prisma.message.create({
@@ -393,8 +248,8 @@ ${code}
         });
       }
 
-      // Extract dependencies from summary (for mobile projects)
-      const dependencies = isMobile ? extractDependencies(result.state.data.summary) : null;
+      // Extract dependencies for mobile
+      const dependencies = isMobile ? extractDependencies(gpt5Result.summary) : null;
 
       return await prisma.message.create({
         data: {
@@ -406,19 +261,19 @@ ${code}
             create: {
               sandboxUrl: sandboxUrl,
               title: parseAgentOutput(fragmentTitleOutput),
-              files: result.state.data.files,
+              files: gpt5Result.files,
               dependencies: dependencies || undefined,
             }
           }
         },
-      })
+      });
     });
 
     return {
       url: sandboxUrl,
-      title: "Fragment",
-      files: result.state.data.files,
-      summary: result.state.data.summary,
+      title: parseAgentOutput(fragmentTitleOutput),
+      files: gpt5Result.files,
+      summary: gpt5Result.summary,
     };
   },
 );
