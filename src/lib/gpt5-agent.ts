@@ -164,7 +164,11 @@ export async function runGPT5Agent(
       tools,
       tool_choice: 'auto',
       temperature: 0.1,
+    }).catch((error) => {
+      console.error('❌ GPT-5.2 API Error:', error);
+      throw error; //Re-throw to stop execution
     });
+
 
     const choice = response.choices[0];
     const message = choice.message;

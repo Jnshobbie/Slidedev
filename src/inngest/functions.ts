@@ -75,26 +75,34 @@ export const codeAgentFunction = inngest.createFunction(
     }) : null;
 
     // Get previous messages from database
-    const dbMessages = await step.run("get-previous-messages", async () => {
-      return await prisma.message.findMany({
-        where: { projectId: event.data.projectId },
-        orderBy: { createdAt: "desc" },
-        take: 10,
-      });
-    });
+const dbMessages = await step.run("get-previous-messages", async () => {
+  return await prisma.message.findMany({
+    where: { projectId: event.data.projectId },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+  });
+});
 
-    // Format messages for GPT-5.2 (with images)
-    const gpt5Messages = formatMessagesForGPT5(
-      dbMessages.reverse().map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        attachments: msg.attachments as Array<{ url: string; type: string; name: string; size: number }> | undefined
-      }))
-    );
+// Format ALL messages (including current one) for GPT-5.2
+const allMessages = [
+  ...dbMessages.reverse().map(msg => ({
+    role: msg.role,
+    content: msg.content,
+    attachments: msg.attachments as Array<{ url: string; type: string; name: string; size: number }> | undefined
+  })),
+  // Add current message with its attachments
+  {
+    role: 'USER' as const,
+    content: event.data.value,
+    attachments: event.data.attachments as Array<{ url: string; type: string; name: string; size: number }> | undefined
+  }
+];
 
-    // Add Figma context if present
-    if (figmaData) {
-      const figmaContext = `
+const gpt5Messages = formatMessagesForGPT5(allMessages);
+
+// Add Figma context if present (at the beginning)
+if (figmaData) {
+  const figmaContext = `
 FIGMA DESIGN IMPORTED:
 File: ${figmaData.fileName}
 
@@ -116,17 +124,11 @@ ${code}
 `).join('\n')}
       `.trim();
 
-      gpt5Messages.unshift({
-        role: 'user',
-        content: figmaContext
-      });
-    }
-
-    // Add current user message
-    gpt5Messages.push({
-      role: 'user',
-      content: event.data.value
-    });
+  gpt5Messages.unshift({
+    role: 'user',
+    content: figmaContext
+  });
+}
 
     // Get the correct prompt for project type
     const codePrompt = getPromptForProjectType(projectType) + '\n\n' + GPT52_CODE_AGENT_PROMPT;
