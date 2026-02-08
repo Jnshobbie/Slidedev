@@ -3,11 +3,11 @@ import { runGPT5Agent, formatMessagesForGPT5, type GPT5AgentContext } from "@/li
 import { Sandbox } from "@e2b/code-interpreter";
 import { openai, createAgent, createTool, createNetwork, type Tool, type Message, createState } from "@inngest/agent-kit";
 
-import { 
-  FRAGMENT_TITLE_PROMPT, 
-  RESPONSE_PROMPT, 
+import {
+  FRAGMENT_TITLE_PROMPT,
+  RESPONSE_PROMPT,
   getPromptForProjectType,
-  GPT52_CODE_AGENT_PROMPT 
+  GPT52_CODE_AGENT_PROMPT
 } from "@/prompt";
 import { prisma } from "@/lib/db";
 
@@ -75,34 +75,34 @@ export const codeAgentFunction = inngest.createFunction(
     }) : null;
 
     // Get previous messages from database
-const dbMessages = await step.run("get-previous-messages", async () => {
-  return await prisma.message.findMany({
-    where: { projectId: event.data.projectId },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-  });
-});
+    const dbMessages = await step.run("get-previous-messages", async () => {
+      return await prisma.message.findMany({
+        where: { projectId: event.data.projectId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      });
+    });
 
-// Format ALL messages (including current one) for GPT-5.2
-const allMessages = [
-  ...dbMessages.reverse().map(msg => ({
-    role: msg.role,
-    content: msg.content,
-    attachments: msg.attachments as Array<{ url: string; type: string; name: string; size: number }> | undefined
-  })),
-  // Add current message with its attachments
-  {
-    role: 'USER' as const,
-    content: event.data.value,
-    attachments: event.data.attachments as Array<{ url: string; type: string; name: string; size: number }> | undefined
-  }
-];
+    // Format ALL messages (including current one) for GPT-5.2
+    const allMessages = [
+      ...dbMessages.reverse().map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        attachments: msg.attachments as Array<{ url: string; type: string; name: string; size: number }> | undefined
+      })),
+      // Add current message with its attachments
+      {
+        role: 'USER' as const,
+        content: event.data.value,
+        attachments: event.data.attachments as Array<{ url: string; type: string; name: string; size: number }> | undefined
+      }
+    ];
 
-const gpt5Messages = formatMessagesForGPT5(allMessages);
+    const gpt5Messages = formatMessagesForGPT5(allMessages);
 
-// Add Figma context if present (at the beginning)
-if (figmaData) {
-  const figmaContext = `
+    // Add Figma context if present (at the beginning)
+    if (figmaData) {
+      const figmaContext = `
 FIGMA DESIGN IMPORTED:
 File: ${figmaData.fileName}
 
@@ -124,82 +124,88 @@ ${code}
 `).join('\n')}
       `.trim();
 
-  gpt5Messages.unshift({
-    role: 'user',
-    content: figmaContext
-  });
-}
+      gpt5Messages.unshift({
+        role: 'user',
+        content: figmaContext
+      });
+    }
 
     // Get the correct prompt for project type
     const codePrompt = getPromptForProjectType(projectType) + '\n\n' + GPT52_CODE_AGENT_PROMPT;
 
     console.log(`🚀 Delegating to GPT-5.2 agent (${isMobile ? 'mobile' : 'web'} mode)`);
+    console.log(`📊 GPT-5 Messages count: ${gpt5Messages.length}`);
+    console.log(`🔑 OpenAI Key exists: ${!!process.env.OPENAI_API_KEY}`);
+    console.log(`📝 First message:`, JSON.stringify(gpt5Messages[0]));
+
 
     // Run GPT-5.2 agent with tool callback
-const gpt5Result = await step.run("run-gpt5-agent", async () => {
-  const currentFiles: Record<string, string> = {}; // ✅ const instead of let
+    const gpt5Result = await step.run("run-gpt5-agent", async () => {
+    console.log(`🔥 INSIDE step.run - About to call runGPT5Agent`);
+      const currentFiles: Record<string, string> = {}; // ✅ const instead of let
+      
 
-  const result = await runGPT5Agent(
-    {
-      projectType,
-      messages: gpt5Messages,
-      systemPrompt: codePrompt,
-      currentFiles,
-      sandboxId: sandboxId || undefined
-    },
-    // Tool callback - executes tools via Inngest step.run
-    async (toolName: string, args: { files?: Array<{ path: string; content: string }>; command?: string }) => { // ✅ Typed args
-      if (toolName === 'createOrUpdateFiles' && !isMobile && sandboxId) {
-        // Web: Create files in E2B sandbox
-        const sandbox = await getSandbox(sandboxId);
-        if (args.files) {
-          for (const file of args.files) {
-            await sandbox.files.write(file.path, file.content);
-            currentFiles[file.path] = file.content;
-            console.log(`📝 Created file: ${file.path}`);
+      const result = await runGPT5Agent(
+        {
+          projectType,
+          messages: gpt5Messages,
+          systemPrompt: codePrompt,
+          currentFiles,
+          sandboxId: sandboxId || undefined
+        },
+        // Tool callback - executes tools via Inngest step.run
+        async (toolName: string, args: { files?: Array<{ path: string; content: string }>; command?: string }) => { // ✅ Typed args
+          if (toolName === 'createOrUpdateFiles' && !isMobile && sandboxId) {
+            // Web: Create files in E2B sandbox
+            const sandbox = await getSandbox(sandboxId);
+            if (args.files) {
+              for (const file of args.files) {
+                await sandbox.files.write(file.path, file.content);
+                currentFiles[file.path] = file.content;
+                console.log(`📝 Created file: ${file.path}`);
+              }
+            }
+            return 'Files created successfully';
+          } else if (toolName === 'createOrUpdateFiles' && isMobile) {
+            // Mobile: Store files in memory
+            if (args.files) {
+              for (const file of args.files) {
+                currentFiles[file.path] = file.content;
+                console.log(`📱 Created mobile file: ${file.path}`);
+              }
+            }
+            return 'Files created successfully';
+          } else if (toolName === 'terminal' && sandboxId && args.command) {
+            // Web: Execute terminal command
+            const sandbox = await getSandbox(sandboxId);
+            const buffers = { stdout: '', stderr: '' };
+            try {
+              const result = await sandbox.commands.run(args.command, {
+                onStdout: (data: string) => { buffers.stdout += data; },
+                onStderr: (data: string) => { buffers.stderr += data; }
+              });
+              console.log(`💻 Terminal: ${args.command} → ${result.stdout}`);
+              return result.stdout;
+            } catch (e) {
+              console.error(`❌ Terminal error: ${e}`);
+              return `Error: ${e}\nstdout: ${buffers.stdout}\nstderr: ${buffers.stderr}`;
+            }
+          } else if (toolName === 'readFiles' && sandboxId && args.files) {
+            // Web: Read files from sandbox
+            const sandbox = await getSandbox(sandboxId);
+            const contents = [];
+            for (const file of args.files) {
+              const content = await sandbox.files.read(file.path);
+              contents.push({ path: file.path, content });
+            }
+            return JSON.stringify(contents);
           }
+          return 'Tool not available';
         }
-        return 'Files created successfully';
-      } else if (toolName === 'createOrUpdateFiles' && isMobile) {
-        // Mobile: Store files in memory
-        if (args.files) {
-          for (const file of args.files) {
-            currentFiles[file.path] = file.content;
-            console.log(`📱 Created mobile file: ${file.path}`);
-          }
-        }
-        return 'Files created successfully';
-      } else if (toolName === 'terminal' && sandboxId && args.command) {
-        // Web: Execute terminal command
-        const sandbox = await getSandbox(sandboxId);
-        const buffers = { stdout: '', stderr: '' };
-        try {
-          const result = await sandbox.commands.run(args.command, {
-            onStdout: (data: string) => { buffers.stdout += data; },
-            onStderr: (data: string) => { buffers.stderr += data; }
-          });
-          console.log(`💻 Terminal: ${args.command} → ${result.stdout}`);
-          return result.stdout;
-        } catch (e) {
-          console.error(`❌ Terminal error: ${e}`);
-          return `Error: ${e}\nstdout: ${buffers.stdout}\nstderr: ${buffers.stderr}`;
-        }
-      } else if (toolName === 'readFiles' && sandboxId && args.files) {
-        // Web: Read files from sandbox
-        const sandbox = await getSandbox(sandboxId);
-        const contents = [];
-        for (const file of args.files) {
-          const content = await sandbox.files.read(file.path);
-          contents.push({ path: file.path, content });
-        }
-        return JSON.stringify(contents);
-      }
-      return 'Tool not available';
-    }
-  );
+      );
 
-  return result;
-});
+      return result;
+    });
 
     console.log(`✅ GPT-5.2 completed with ${Object.keys(gpt5Result.files).length} files`);
 
