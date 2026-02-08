@@ -159,7 +159,7 @@ export async function runGPT5Agent(
     console.log(`🔄 GPT-5.2 iteration ${iterations}/${maxIterations}`);
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-5.2',
+      model: 'gpt-5.2-chat-latest',
       messages: gpt5Messages,
       tools,
       tool_choice: 'auto',

@@ -82,7 +82,7 @@ export const ProjectView = ({ projectId, projectType = "web" }: Props) => {
                     : "text-muted-foreground opacity-60 hover:opacity-80 hover:bg-background/30"
                 )}
               >
-                <EyeIcon /> <span>Demo</span>
+                <EyeIcon /> <span></span>
               </button>
               <button
                 onClick={() => setActiveTab("code")}
@@ -94,7 +94,7 @@ export const ProjectView = ({ projectId, projectType = "web" }: Props) => {
                     : "text-muted-foreground opacity-60 hover:opacity-80 hover:bg-background/30"
                 )}
               >
-                <CodeIcon /> <span>Code</span>
+                <CodeIcon /> <span></span>
               </button>
             </div>
 
