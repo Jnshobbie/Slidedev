@@ -91,24 +91,20 @@ export const projectsRouter = createTRPCRouter({
         }
       });
 
-      console.log('🚨 ABOUT TO SEND INNGEST EVENT (projects)');
-      console.log('🚨 Event data:', {
-        projectId: createdProject.id,
-        value: input.value?.substring(0, 50),
-        hasFigma: !!input.figmaData
-      });
+      // Replace the inngest.send call with:
+console.log('🚀 Calling GPT-5.2 directly (bypassing Inngest)');
 
-      await inngest.send({
-        name: "code-agent/run",
-        data: {
-          value: input.value,
-          projectId: createdProject.id,
-          attachments: input.attachments,
-          figmaData: input.figmaData,
-        }
-      });
+await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/ai/generate`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    projectId: createdProject.id,
+    value: input.value,
+    projectType: createdProject.projectType,
+  })
+});
 
-      console.log('🚨 INNGEST EVENT SENT (projects)');
+console.log('✅ GPT-5.2 call initiated');
 
       return createdProject;
     }),
