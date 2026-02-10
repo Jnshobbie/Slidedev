@@ -9,56 +9,30 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
+    console.log('🎯 /api/ai/generate ENDPOINT HIT');
+    
     const body = await request.json();
+    console.log('📦 Request body:', { projectId: body.projectId, projectType: body.projectType });
+    
     const { projectId, value, projectType } = body;
-
-    console.log('🚀 GPT-5.2 responses.create() starting');
-    console.log('📋 Project type:', projectType);
 
     const systemPrompt = getPromptForProjectType(projectType);
 
-    // ✅ Use responses.create() with correct message format
-    const response = await openai.responses.create({
+    console.log('🚀 Calling GPT-5.2 via chat.completions');
+
+    // ✅ Use Chat Completions API (officially supported for GPT-5.2)
+    const response = await openai.chat.completions.create({
       model: 'gpt-5.2',
-      input: [
-        {
-          type: 'message',
-          role: 'system',
-          content: systemPrompt
-        },
-        {
-          type: 'message',
-          role: 'user',
-          content: value
-        }
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: value }
       ],
-      reasoning: {
-        effort: 'medium'
-      },
       temperature: 0.1,
     });
 
-    console.log('📦 Response output items:', response.output.length);
-
-    // Parse the response.output array - look for message type
-    let summary = '';
-
-    for (const item of response.output) {
-      if (item.type === 'message' && 'content' in item) {
-        // content is an array of ResponseOutputText | ResponseOutputRefusal
-        const textContent = item.content.find(c => c.type === 'output_text');
-        if (textContent && 'text' in textContent) {
-          summary = textContent.text;
-          console.log('✅ GPT-5.2 responded:', summary.substring(0, 100));
-          break;
-        }
-      }
-    }
-
-    if (!summary) {
-      console.log('⚠️ No message found, dumping full output:', JSON.stringify(response.output, null, 2));
-      throw new Error('No text response in output');
-    }
+    const summary = response.choices[0].message.content || '';
+    
+    console.log('✅ GPT-5.2 responded:', summary.substring(0, 100));
 
     // Save to database
     await prisma.message.create({
@@ -79,7 +53,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ GPT-5.2 error:', error);
+    console.error('❌ Error in /api/ai/generate:', error);
     
     const errorMessage = error instanceof Error ? error.message : String(error);
     
