@@ -84,26 +84,25 @@ export const messagesRouter = createTRPCRouter({
         }
       });
 
-      console.log('🚨 ABOUT TO SEND INNGEST EVENT (messages)');
-      console.log('🚨 Event data:', {
-        projectId: input.projectId,
-        value: input.value?.substring(0, 50),
-        hasAttachments: !!input.attachments
-      });
+      console.log('🚀 Calling GPT-5.2 for message');
 
-
-      await inngest.send({
-        name: "code-agent/run",
-        data: {
-          value: input.value,
+      // Fire and forget - don't await
+      fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/ai/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           projectId: input.projectId,
+          value: input.value,
+          projectType: existingProject.projectType,
           attachments: input.attachments,
-          // Note: projectType is read from database in functions.ts
-          // We don't need to pass it here
-        },
+        })
+      }).then(res => res.json()).then(result => {
+        console.log('✅ GPT-5.2 completed (message):', result);
+      }).catch(error => {
+        console.error('❌ GPT-5.2 error (message):', error);
       });
 
-      console.log('🚨 INNGEST EVENT SENT (messages)');
+      console.log('✅ Message created, GPT-5.2 processing');
 
       return createdMessage;
     }),
