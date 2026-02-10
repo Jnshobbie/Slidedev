@@ -78,7 +78,7 @@ export const projectsRouter = createTRPCRouter({
           name: generateSlug(2, {
             format: "kebab",
           }),
-          projectType: input.projectType,
+          projectType: input.projectType, // Save projectType to database
           messages: {
             create: {
               content: input.value,
@@ -90,33 +90,25 @@ export const projectsRouter = createTRPCRouter({
         }
       });
 
-      console.log('✅ Project created:', createdProject.id);
-      console.log('🚀 Calling GPT-5.2 API (project)');
-
-      // Build URL that works in both production and preview deployments
-      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-      const host = process.env.VERCEL_URL || 'localhost:3000';
-      const baseUrl = `${protocol}://${host}`;
-
-      console.log('📍 API URL:', `${baseUrl}/api/ai/generate`);
-
-      // Fire and forget - don't await
-      fetch(`${baseUrl}/api/ai/generate`, {
+      // Call GPT-5.2 directly (bypassing Inngest)
+      console.log('🚀 Calling GPT-5.2 directly from projects (bypassing Inngest)');
+      
+      // Fire and forget - don't await to return immediately
+      fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/ai/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId: createdProject.id,
           value: input.value,
-          projectType: createdProject.projectType,
-          attachments: input.attachments,
+          attachments: input.attachments || undefined,
+          figmaData: input.figmaData || undefined,
         })
-      }).then(res => res.json()).then(result => {
-        console.log('✅ GPT-5.2 completed (project):', result);
-      }).catch(error => {
-        console.error('❌ GPT-5.2 error (project):', error);
+      }).catch((error) => {
+        console.error('❌ Failed to trigger GPT-5.2 job:', error);
+        // Don't throw - we've already created the project, so we don't want to fail the mutation
       });
 
-      console.log('✅ Returning project to user');
+      console.log('✅ GPT-5.2 call initiated from projects');
 
       return createdProject;
     }),

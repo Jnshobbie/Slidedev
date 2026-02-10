@@ -44,7 +44,7 @@ export const messagesRouter = createTRPCRouter({
           .min(1, { message: "Message is required " })
           .max(10000, { message: "Message is too long " }),
         projectId: z.string().min(1, { message: "Project ID is required" }),
-        projectType: z.enum(["web", "mobile"]).optional(),
+        projectType: z.enum(["web", "mobile"]).optional(), // NEW: Optional projectType (form selector)
         attachments: z.array(fileAttachmentSchema).optional(),
       }),
     )
@@ -83,33 +83,25 @@ export const messagesRouter = createTRPCRouter({
         }
       });
 
-      console.log('✅ Message created:', createdMessage.id);
-      console.log('🚀 Calling GPT-5.2 API (message)');
-
-      // Build URL that works in both production and preview deployments
-      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-      const host = process.env.VERCEL_URL || 'localhost:3000';
-      const baseUrl = `${protocol}://${host}`;
-
-      console.log('📍 API URL:', `${baseUrl}/api/ai/generate`);
-
-      // Fire and forget - don't await
-      fetch(`${baseUrl}/api/ai/generate`, {
+      // Call GPT-5.2 directly (bypassing Inngest)
+      console.log('🚀 Calling GPT-5.2 directly from messages (bypassing Inngest)');
+      
+      // Fire and forget - don't await to return immediately
+      fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/ai/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId: input.projectId,
           value: input.value,
-          projectType: existingProject.projectType,
-          attachments: input.attachments,
+          attachments: input.attachments || undefined,
+          // figmaData is not available in messages, but that's fine
         })
-      }).then(res => res.json()).then(result => {
-        console.log('✅ GPT-5.2 completed (message):', result);
-      }).catch(error => {
-        console.error('❌ GPT-5.2 error (message):', error);
+      }).catch((error) => {
+        console.error('❌ Failed to trigger GPT-5.2 job:', error);
+        // Don't throw - we've already created the message, so we don't want to fail the mutation
       });
 
-      console.log('✅ Returning message to user');
+      console.log('✅ GPT-5.2 call initiated from messages');
 
       return createdMessage;
     }),
