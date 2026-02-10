@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { prisma } from "@/lib/db";
-import { inngest } from "@/inngest/client";
 import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { consumeCredits } from "@/lib/usage";
@@ -45,7 +44,7 @@ export const messagesRouter = createTRPCRouter({
           .min(1, { message: "Message is required " })
           .max(10000, { message: "Message is too long " }),
         projectId: z.string().min(1, { message: "Project ID is required" }),
-        projectType: z.enum(["web", "mobile"]).optional(), // NEW: Optional projectType (form selector)
+        projectType: z.enum(["web", "mobile"]).optional(),
         attachments: z.array(fileAttachmentSchema).optional(),
       }),
     )
@@ -84,10 +83,18 @@ export const messagesRouter = createTRPCRouter({
         }
       });
 
-      console.log('🚀 Calling GPT-5.2 for message');
+      console.log('✅ Message created:', createdMessage.id);
+      console.log('🚀 Calling GPT-5.2 API (message)');
+
+      // Build URL that works in both production and preview deployments
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+      const host = process.env.VERCEL_URL || 'localhost:3000';
+      const baseUrl = `${protocol}://${host}`;
+
+      console.log('📍 API URL:', `${baseUrl}/api/ai/generate`);
 
       // Fire and forget - don't await
-      fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/ai/generate`, {
+      fetch(`${baseUrl}/api/ai/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -102,7 +109,7 @@ export const messagesRouter = createTRPCRouter({
         console.error('❌ GPT-5.2 error (message):', error);
       });
 
-      console.log('✅ Message created, GPT-5.2 processing');
+      console.log('✅ Returning message to user');
 
       return createdMessage;
     }),

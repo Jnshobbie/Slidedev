@@ -2,7 +2,6 @@ import { z } from "zod";
 import { generateSlug } from "random-word-slugs";
 
 import { prisma } from "@/lib/db";
-import { inngest } from "@/inngest/client";
 import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { consumeCredits } from "@/lib/usage";
@@ -79,7 +78,7 @@ export const projectsRouter = createTRPCRouter({
           name: generateSlug(2, {
             format: "kebab",
           }),
-          projectType: input.projectType, // Save projectType to database
+          projectType: input.projectType,
           messages: {
             create: {
               content: input.value,
@@ -91,27 +90,33 @@ export const projectsRouter = createTRPCRouter({
         }
       });
 
-      // Replace the inngest.send call with:
-      // In procedures.ts, replace the fetch section with:
+      console.log('✅ Project created:', createdProject.id);
+      console.log('🚀 Calling GPT-5.2 API (project)');
 
-      console.log('🚀 About to call GPT-5.2 API');
+      // Build URL that works in both production and preview deployments
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+      const host = process.env.VERCEL_URL || 'localhost:3000';
+      const baseUrl = `${protocol}://${host}`;
+
+      console.log('📍 API URL:', `${baseUrl}/api/ai/generate`);
 
       // Fire and forget - don't await
-      fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/ai/generate`, {
+      fetch(`${baseUrl}/api/ai/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId: createdProject.id,
           value: input.value,
           projectType: createdProject.projectType,
+          attachments: input.attachments,
         })
       }).then(res => res.json()).then(result => {
-        console.log('✅ GPT-5.2 completed:', result);
+        console.log('✅ GPT-5.2 completed (project):', result);
       }).catch(error => {
-        console.error('❌ GPT-5.2 error:', error);
+        console.error('❌ GPT-5.2 error (project):', error);
       });
 
-      console.log('✅ Project created, GPT-5.2 processing in background');
+      console.log('✅ Returning project to user');
 
       return createdProject;
     }),
