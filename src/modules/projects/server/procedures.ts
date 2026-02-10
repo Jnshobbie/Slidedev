@@ -92,19 +92,26 @@ export const projectsRouter = createTRPCRouter({
       });
 
       // Replace the inngest.send call with:
-console.log('🚀 Calling GPT-5.2 directly (bypassing Inngest)');
+      // In procedures.ts, replace the fetch section with:
 
-await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/ai/generate`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    projectId: createdProject.id,
-    value: input.value,
-    projectType: createdProject.projectType,
-  })
-});
+      console.log('🚀 About to call GPT-5.2 API');
 
-console.log('✅ GPT-5.2 call initiated');
+      // Fire and forget - don't await
+      fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/ai/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: createdProject.id,
+          value: input.value,
+          projectType: createdProject.projectType,
+        })
+      }).then(res => res.json()).then(result => {
+        console.log('✅ GPT-5.2 completed:', result);
+      }).catch(error => {
+        console.error('❌ GPT-5.2 error:', error);
+      });
+
+      console.log('✅ Project created, GPT-5.2 processing in background');
 
       return createdProject;
     }),
