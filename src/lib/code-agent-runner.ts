@@ -1,6 +1,7 @@
 // src/lib/code-agent-runner.ts
 import { Sandbox } from "@e2b/code-interpreter";
 import OpenAI from "openai";
+import { APIError } from "openai";
 import { prisma } from "@/lib/db";
 import { SANDBOX_TIMEOUT } from "@/inngest/types";
 import { getPromptForProjectType, GPT52_CODE_AGENT_PROMPT, FRAGMENT_TITLE_PROMPT, RESPONSE_PROMPT } from "@/prompt";
@@ -8,6 +9,11 @@ import { formatMessagesForGPT5, runGPT5Agent } from "@/lib/gpt5-agent";
 import type { FigmaImportResult } from "@/lib/figma/types";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Model name configuration for GPT-5 family
+// Available models: 'gpt-5.2', 'gpt-5.2-pro', 'gpt-5.2-codex', 'gpt-5.1', 'gpt-5-mini', 'gpt-5-nano'
+// Default: 'gpt-5.2' - best for complex reasoning, broad world knowledge, and code-heavy tasks
+const GPT_MODEL = process.env.OPENAI_MODEL || 'gpt-5.2';
 
 type Attachment = { url: string; type: string; name: string; size: number };
 
@@ -17,7 +23,17 @@ export async function runCodeAgentJob(params: {
   attachments?: Attachment[];
   figmaData?: FigmaImportResult;
 }) {
+  console.log('🎯 runCodeAgentJob: Starting with params:', {
+    projectId: params.projectId,
+    hasValue: !!params.value,
+    hasAttachments: !!params.attachments,
+    hasFigmaData: !!params.figmaData,
+    openaiKeyExists: !!process.env.OPENAI_API_KEY,
+  });
+
   const { projectId, value, attachments, figmaData } = params;
+
+  try {
 
   // 1) Get project type
   const project = await prisma.project.findUnique({
@@ -146,22 +162,57 @@ ${code}
   );
 
   // 6) Title + user‑facing summary (no Inngest agent‑kit)
+  console.log(`📝 Generating fragment title and response with model '${GPT_MODEL}'...`);
   const [fragmentTitleResp, responseResp] = await Promise.all([
     openai.chat.completions.create({
-      model: "gpt-5.2",
+      model: GPT_MODEL,
       messages: [
         { role: "system", content: FRAGMENT_TITLE_PROMPT },
         { role: "user", content: gpt5Result.summary },
       ],
-      temperature: 0.4,
+      reasoning_effort: 'none', // GPT-5.2 parameter
+      verbosity: 'low', // GPT-5.2 parameter - low for concise titles
+      temperature: 0.4, // Only works with reasoning_effort: 'none'
+    }).catch((error) => {
+      console.error('❌ Fragment title generation error:', error);
+      // Fallback without GPT-5.2 params if they're not supported
+      if (error instanceof APIError && error.status === 400) {
+        console.log('⚠️ Retrying title generation without GPT-5.2 params...');
+        return openai.chat.completions.create({
+          model: GPT_MODEL,
+          messages: [
+            { role: "system", content: FRAGMENT_TITLE_PROMPT },
+            { role: "user", content: gpt5Result.summary },
+          ],
+          temperature: 0.4,
+        });
+      }
+      throw error;
     }),
     openai.chat.completions.create({
-      model: "gpt-5.2",
+      model: GPT_MODEL,
       messages: [
         { role: "system", content: RESPONSE_PROMPT },
         { role: "user", content: gpt5Result.summary },
       ],
-      temperature: 0.4,
+      reasoning_effort: 'none', // GPT-5.2 parameter
+      verbosity: 'medium', // GPT-5.2 parameter - medium for user responses
+      temperature: 0.4, // Only works with reasoning_effort: 'none'
+    }).catch((error) => {
+      console.error('❌ Response generation error:', error);
+      // Fallback without GPT-5.2 params if they're not supported
+      if (error instanceof APIError && error.status === 400) {
+        console.log('⚠️ Retrying response generation without GPT-5.2 params...');
+        return openai.chat.completions.create({
+          model: GPT_MODEL,
+          messages: [
+            { role: "system", content: RESPONSE_PROMPT },
+            { role: "user", content: gpt5Result.summary },
+          ],
+          temperature: 0.4,
+        });
+      }
+      throw error;
     }),
   ]);
 
@@ -215,10 +266,33 @@ ${code}
     });
   }
 
-  return {
-    url: sandboxUrl,
-    title: fragmentTitle,
-    files: gpt5Result.files,
-    summary: gpt5Result.summary,
-  };
+    console.log('✅ runCodeAgentJob: Completed successfully');
+    return {
+      url: sandboxUrl,
+      title: fragmentTitle,
+      files: gpt5Result.files,
+      summary: gpt5Result.summary,
+    };
+  } catch (error) {
+    console.error('❌ runCodeAgentJob: Error occurred:', error);
+    console.error('❌ runCodeAgentJob: Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
+
+    // Save error message to database
+    await prisma.message.create({
+      data: {
+        projectId,
+        content: `Error: ${error instanceof Error ? error.message : 'Something went wrong. Please try again.'}`,
+        role: "ASSISTANT",
+        type: "ERROR",
+      },
+    }).catch((dbError) => {
+      console.error('❌ runCodeAgentJob: Failed to save error to DB:', dbError);
+    });
+
+    throw error; // Re-throw so API route can handle it
+  }
 }

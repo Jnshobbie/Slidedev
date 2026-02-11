@@ -1,9 +1,15 @@
 import OpenAI from 'openai';
 import type { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions';
+import { APIError } from 'openai';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Model name configuration for GPT-5 family
+// Available models: 'gpt-5.2', 'gpt-5.2-pro', 'gpt-5.2-codex', 'gpt-5.1', 'gpt-5-mini', 'gpt-5-nano'
+// Default: 'gpt-5.2' - best for complex reasoning, broad world knowledge, and code-heavy tasks
+const GPT_MODEL = process.env.OPENAI_MODEL || 'gpt-5.2';
 
 export interface GPT5Message {
   role: 'user' | 'assistant' | 'system';
@@ -158,16 +164,59 @@ export async function runGPT5Agent(
     iterations++;
     console.log(`🔄 GPT-5.2 iteration ${iterations}/${maxIterations}`);
 
+    console.log(`📡 GPT-5.2: Making API call with model '${GPT_MODEL}'`);
+    console.log(`📡 GPT-5.2: Messages count: ${gpt5Messages.length}`);
+    console.log(`📡 GPT-5.2: Tools count: ${tools.length}`);
+    console.log(`📡 GPT-5.2: OpenAI key exists: ${!!process.env.OPENAI_API_KEY}`);
+
+    // GPT-5.2 with Chat Completions API
+    // Note: According to docs, reasoning_effort and verbosity are only supported with reasoning_effort: "none"
+    // For other reasoning levels, use reasoning.effort in Responses API
     const response = await openai.chat.completions.create({
-      model: 'gpt-5.2',
+      model: GPT_MODEL,
       messages: gpt5Messages,
       tools,
       tool_choice: 'auto',
-      temperature: 0.1,
+      reasoning_effort: 'none', // GPT-5.2 parameter - 'none' is default and allows temperature
+      verbosity: 'medium', // GPT-5.2 parameter - controls output token count
+      temperature: 0.1, // Only works with reasoning_effort: 'none'
     }).catch((error) => {
       console.error('❌ GPT-5.2 API Error:', error);
+      
+      if (error instanceof APIError) {
+        console.error('❌ GPT-5.2 API Error details:', {
+          message: error.message,
+          status: error.status,
+          code: error.code,
+          type: error.type,
+          error: error.error,
+        });
+        
+        // If it's a parameter error, try without the new parameters
+        if (error.status === 400 || error.code === 'invalid_request_error') {
+          console.log('⚠️ Retrying without GPT-5.2 specific parameters...');
+          return openai.chat.completions.create({
+            model: GPT_MODEL,
+            messages: gpt5Messages,
+            tools,
+            tool_choice: 'auto',
+            temperature: 0.1,
+          });
+        }
+      } else if (error instanceof Error) {
+        console.error('❌ GPT-5.2 API Error details:', {
+          message: error.message,
+          name: error.name,
+          stack: error.stack,
+        });
+      } else {
+        console.error('❌ GPT-5.2 API Error: Unknown error type', error);
+      }
+      
       throw error; //Re-throw to stop execution
     });
+
+    console.log(`✅ GPT-5.2: API call successful, finish_reason: ${response.choices[0]?.finish_reason}`);
 
 
     const choice = response.choices[0];

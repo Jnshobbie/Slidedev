@@ -6,6 +6,7 @@ import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { consumeCredits } from "@/lib/usage";
 import type { FigmaImportResult } from "@/lib/figma/types";
+import { runCodeAgentJob } from "@/lib/code-agent-runner";
 
 const fileAttachmentSchema = z.object({
   url: z.string(),
@@ -93,22 +94,23 @@ export const projectsRouter = createTRPCRouter({
       // Call GPT-5.2 directly (bypassing Inngest)
       console.log('🚀 Calling GPT-5.2 directly from projects (bypassing Inngest)');
       
-      // Fire and forget - don't await to return immediately
-      fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/ai/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId: createdProject.id,
-          value: input.value,
-          attachments: input.attachments || undefined,
-          figmaData: input.figmaData || undefined,
-        })
+      // Call the runner directly (fire and forget - don't await to return immediately)
+      // This avoids HTTP fetch issues and runs in the same process
+      runCodeAgentJob({
+        projectId: createdProject.id,
+        value: input.value,
+        attachments: input.attachments || undefined,
+        figmaData: input.figmaData || undefined,
       }).catch((error) => {
-        console.error('❌ Failed to trigger GPT-5.2 job:', error);
+        console.error('❌ Failed to run GPT-5.2 job:', error);
+        console.error('❌ Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        });
         // Don't throw - we've already created the project, so we don't want to fail the mutation
       });
 
-      console.log('✅ GPT-5.2 call initiated from projects');
+      console.log('✅ GPT-5.2 job initiated from projects');
 
       return createdProject;
     }),
