@@ -1,9 +1,9 @@
 import { task } from "@trigger.dev/sdk/v3";
 import { Sandbox } from "@e2b/code-interpreter";
 import OpenAI from "openai";
+import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
 import { prisma } from "@/lib/db";
 import { getPromptForProjectType, GPT52_CODE_AGENT_PROMPT } from "@/prompt";
-import { formatMessagesForGPT5, runGPT5Agent } from "@/lib/gpt5-agent";
 import { SANDBOX_TIMEOUT } from "@/inngest/types";
 import type { FigmaImportResult } from "@/lib/figma/types";
 
@@ -16,22 +16,9 @@ interface GenerateCodePayload {
   figmaData?: FigmaImportResult;
 }
 
-// Tool argument types
-interface CreateOrUpdateFilesArgs {
-  files: Array<{ path: string; content: string }>;
-}
-
-interface TerminalArgs {
-  command: string;
-}
-
-interface ReadFilesArgs {
-  files: string[];
-}
-
 export const generateCode = task({
   id: "generate-code",
-  maxDuration: 300, // 5 minutes max
+  maxDuration: 300,
   retry: {
     maxAttempts: 3,
     factor: 2,
@@ -84,9 +71,30 @@ export const generateCode = task({
       },
     ];
 
-    const gpt5Messages = formatMessagesForGPT5(allMessages);
+    // 4. Format messages for GPT-5.2 (inline, no helper)
+    const formattedMessages = allMessages.map(msg => {
+      const imageUrls = msg.attachments?.filter(a => a.type.startsWith('image/')).map(a => a.url) || [];
 
-    // 4. Add Figma context if present
+      if (imageUrls.length > 0) {
+        return {
+          role: msg.role === 'ASSISTANT' ? 'assistant' : 'user',
+          content: [
+            { type: 'text' as const, text: msg.content },
+            ...imageUrls.map(url => ({
+              type: 'image_url' as const,
+              image_url: { url, detail: 'high' as const }
+            }))
+          ]
+        };
+      }
+
+      return {
+        role: msg.role === 'ASSISTANT' ? 'assistant' : 'user',
+        content: msg.content
+      };
+    });
+
+    // 5. Add Figma context if present
     if (figmaData) {
       const figmaContext = `
 FIGMA DESIGN IMPORTED:
@@ -104,7 +112,7 @@ Component Files Extracted:
 ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
       `.trim();
 
-      gpt5Messages.unshift({
+      formattedMessages.unshift({
         role: "user",
         content: figmaContext,
       });
@@ -113,87 +121,230 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
     const systemPrompt = getPromptForProjectType(projectType) + "\n\n" + GPT52_CODE_AGENT_PROMPT;
     const currentFiles: Record<string, string> = {};
 
-    // 5. Run GPT-5.2 agent with tool callback
-    console.log('🤖 Starting GPT-5.2 agent');
-    
-    const gpt5Result = await runGPT5Agent(
+    // 6. Define tools
+    const tools: ChatCompletionTool[] = isMobile ? [
       {
-        projectType,
-        messages: gpt5Messages,
-        systemPrompt,
-        currentFiles,
-        sandboxId: sandboxId || undefined,
+        type: 'function' as const,
+        function: {
+          name: 'createOrUpdateFiles',
+          description: 'Create or update React Native files',
+          parameters: {
+            type: 'object',
+            properties: {
+              files: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    path: { type: 'string' },
+                    content: { type: 'string' }
+                  },
+                  required: ['path', 'content']
+                }
+              }
+            },
+            required: ['files']
+          }
+        }
+      }
+    ] : [
+      {
+        type: 'function' as const,
+        function: {
+          name: 'terminal',
+          description: 'Run terminal commands',
+          parameters: {
+            type: 'object',
+            properties: { command: { type: 'string' } },
+            required: ['command']
+          }
+        }
       },
-      // Tool execution callback with proper typing
-      async (toolName: string, args: Record<string, unknown>): Promise<string> => {
-        console.log(`🔧 Executing tool: ${toolName}`);
-        
-        // Type guard for createOrUpdateFiles
-        if (toolName === "createOrUpdateFiles" && "files" in args) {
-          const typedArgs = args as unknown as CreateOrUpdateFilesArgs;
-          const files = typedArgs.files;
-          
-          if (!isMobile && sandboxId) {
-            // Web: Write to E2B sandbox
+      {
+        type: 'function' as const,
+        function: {
+          name: 'createOrUpdateFiles',
+          description: 'Create or update files in Next.js sandbox',
+          parameters: {
+            type: 'object',
+            properties: {
+              files: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    path: { type: 'string' },
+                    content: { type: 'string' }
+                  },
+                  required: ['path', 'content']
+                }
+              }
+            },
+            required: ['files']
+          }
+        }
+      },
+      {
+        type: 'function' as const,
+        function: {
+          name: 'readFiles',
+          description: 'Read files from sandbox',
+          parameters: {
+            type: 'object',
+            properties: {
+              files: { type: 'array', items: { type: 'string' } }
+            },
+            required: ['files']
+          }
+        }
+      }
+    ];
+
+    // 7. GPT-5.2 DIRECT LOOP (no helper, all inline)
+    const messages: ChatCompletionMessageParam[] = [
+      { role: 'system', content: systemPrompt },
+      ...formattedMessages.map((msg): ChatCompletionMessageParam => {
+        if (msg.role === 'user') {
+          if (Array.isArray(msg.content)) {
+            const contentParts = msg.content.map(part => {
+              if (part.type === 'text') {
+                return { type: 'text' as const, text: part.text || '' };
+              } else if (part.type === 'image_url') {
+                return {
+                  type: 'image_url' as const,
+                  image_url: { url: part.image_url?.url || '' }
+                };
+              }
+              return { type: 'text' as const, text: '' };
+            });
+            return { role: 'user', content: contentParts };
+          } else {
+            return { role: 'user', content: msg.content };
+          }
+        } else {
+          return {
+            role: 'assistant',
+            content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+          };
+        }
+      })
+    ];
+
+    let iterations = 0;
+    const maxIterations = 15;
+    let finalSummary = '';
+
+    console.log('🤖 Starting GPT-5.2 direct loop');
+
+    while (iterations < maxIterations) {
+      iterations++;
+      console.log(`🔄 Iteration ${iterations}/${maxIterations}`);
+
+      // DIRECT GPT-5.2 CALL (no helper function)
+      console.log('📡 Calling GPT-5.2 API directly...');
+      const response = await openai.chat.completions.create({
+        model: 'gpt-5.2',
+        messages,
+        tools,
+        tool_choice: 'auto',
+        temperature: 0.1,
+      });
+
+      console.log('✅ GPT-5.2 API call successful');
+
+      const choice = response.choices[0];
+      const message = choice.message;
+
+      // Push assistant message
+      messages.push({
+        role: 'assistant',
+        content: message.content,
+        tool_calls: message.tool_calls
+      } as ChatCompletionMessageParam);
+
+      // Check for completion
+      if (message.content && typeof message.content === 'string' && message.content.includes('<task_summary>')) {
+        console.log('✅ Task complete');
+        finalSummary = message.content;
+        break;
+      }
+
+      // Handle tool calls
+      if (message.tool_calls && message.tool_calls.length > 0) {
+        console.log(`🔧 Processing ${message.tool_calls.length} tool calls`);
+
+        for (const toolCall of message.tool_calls) {
+          if (toolCall.type !== 'function') continue;
+
+          const functionName = toolCall.function.name;
+          const functionArgs = JSON.parse(toolCall.function.arguments);
+
+          console.log(`→ ${functionName}`);
+
+          let toolResult = '';
+
+          // Execute tools directly (no callback)
+          if (functionName === 'createOrUpdateFiles' && functionArgs.files) {
+            if (!isMobile && sandboxId) {
+              const sandbox = await Sandbox.connect(sandboxId);
+              await sandbox.setTimeout(SANDBOX_TIMEOUT);
+              for (const file of functionArgs.files) {
+                await sandbox.files.write(file.path, file.content);
+                currentFiles[file.path] = file.content;
+              }
+            } else {
+              for (const file of functionArgs.files) {
+                currentFiles[file.path] = file.content;
+              }
+            }
+            toolResult = 'Files created successfully';
+          } else if (functionName === 'terminal' && sandboxId && functionArgs.command) {
             const sandbox = await Sandbox.connect(sandboxId);
             await sandbox.setTimeout(SANDBOX_TIMEOUT);
-            for (const file of files) {
-              await sandbox.files.write(file.path, file.content);
-              currentFiles[file.path] = file.content;
-              console.log(`  ✓ Wrote to sandbox: ${file.path}`);
+            const result = await sandbox.commands.run(functionArgs.command);
+            toolResult = result.stdout;
+          } else if (functionName === 'readFiles' && sandboxId && functionArgs.files) {
+            const sandbox = await Sandbox.connect(sandboxId);
+            await sandbox.setTimeout(SANDBOX_TIMEOUT);
+            const contents = [];
+            for (const filePath of functionArgs.files) {
+              const content = await sandbox.files.read(filePath);
+              contents.push({ path: filePath, content });
             }
-          } else {
-            // Mobile: Store in memory
-            for (const file of files) {
-              currentFiles[file.path] = file.content;
-              console.log(`  ✓ Stored in memory: ${file.path}`);
-            }
+            toolResult = JSON.stringify(contents);
           }
-          return "Files created successfully";
-        } 
-        
-        // Type guard for terminal
-        else if (toolName === "terminal" && "command" in args && sandboxId) {
-          const typedArgs = args as unknown as TerminalArgs;
-          const sandbox = await Sandbox.connect(sandboxId);
-          await sandbox.setTimeout(SANDBOX_TIMEOUT);
-          const result = await sandbox.commands.run(typedArgs.command);
-          console.log(`  ✓ Terminal: ${typedArgs.command}`);
-          console.log(`  → ${result.stdout}`);
-          return result.stdout;
-        } 
-        
-        // Type guard for readFiles
-        else if (toolName === "readFiles" && "files" in args && sandboxId) {
-          const typedArgs = args as unknown as ReadFilesArgs;
-          const sandbox = await Sandbox.connect(sandboxId);
-          await sandbox.setTimeout(SANDBOX_TIMEOUT);
-          const contents: Array<{ path: string; content: string }> = [];
-          for (const filePath of typedArgs.files) {
-            const content = await sandbox.files.read(filePath);
-            contents.push({ path: filePath, content });
-            console.log(`  ✓ Read from sandbox: ${filePath}`);
-          }
-          return JSON.stringify(contents);
+
+          // Push tool result
+          messages.push({
+            role: 'tool',
+            content: toolResult || 'Tool execution completed',
+            tool_call_id: toolCall.id
+          } as ChatCompletionMessageParam);
         }
-
-        console.log(`  ⚠️ Tool not available: ${toolName}`);
-        return "Tool not available";
+      } else {
+        console.log('⚠️ No tool calls, prompting to continue');
+        messages.push({
+          role: 'user',
+          content: 'Continue with the task. Use the available tools.'
+        });
       }
-    );
 
-    console.log(`✅ GPT-5.2 agent completed`);
-    console.log(`📝 Files created: ${Object.keys(gpt5Result.files).length}`);
+      if (choice.finish_reason === 'stop' && !message.tool_calls) {
+        console.log('⚠️ Agent stopped without completing');
+        break;
+      }
+    }
 
-    // 6. Generate title and response with GPT-4o
-    console.log('💬 Generating user-facing response with GPT-4o');
-    
+    console.log(`✅ GPT-5.2 completed in ${iterations} iterations`);
+    console.log(`📝 Files created: ${Object.keys(currentFiles).length}`);
+
+    // 8. Generate title and response with GPT-4o
     const [titleResp, responseResp] = await Promise.all([
       openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
           { role: 'system', content: 'Generate a short title (max 5 words) for this code project.' },
-          { role: 'user', content: gpt5Result.summary }
+          { role: 'user', content: finalSummary }
         ],
         temperature: 0.4,
       }),
@@ -201,7 +352,7 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
         model: 'gpt-4o',
         messages: [
           { role: 'system', content: 'Generate a friendly response to the user explaining what you built.' },
-          { role: 'user', content: gpt5Result.summary }
+          { role: 'user', content: finalSummary }
         ],
         temperature: 0.4,
       }),
@@ -210,21 +361,19 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
     const fragmentTitle = titleResp.choices[0]?.message?.content?.trim() || "Fragment";
     const assistantText = responseResp.choices[0]?.message?.content?.trim() || "Here's what I built.";
 
-    // 7. Get sandbox URL
+    // 9. Get sandbox URL
     let sandboxUrl = "mobile-preview://ready";
     if (!isMobile && sandboxId) {
       const sandbox = await Sandbox.connect(sandboxId);
       await sandbox.setTimeout(SANDBOX_TIMEOUT);
       const host = sandbox.getHost(3000);
       sandboxUrl = `https://${host}`;
-      console.log(`🌐 Sandbox URL: ${sandboxUrl}`);
     }
 
-    // 8. Save to database
-    const isError = !gpt5Result.summary || Object.keys(gpt5Result.files).length === 0;
+    // 10. Save to database
+    const isError = !finalSummary || Object.keys(currentFiles).length === 0;
 
     if (isError) {
-      console.log('❌ Task failed - no summary or files');
       await prisma.message.create({
         data: {
           projectId,
@@ -234,7 +383,6 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
         },
       });
     } else {
-      console.log('💾 Saving results to database');
       await prisma.message.create({
         data: {
           projectId,
@@ -245,7 +393,7 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
             create: {
               sandboxUrl,
               title: fragmentTitle,
-              files: gpt5Result.files,
+              files: currentFiles,
             },
           },
         },
@@ -258,7 +406,7 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
       success: !isError,
       url: sandboxUrl,
       title: fragmentTitle,
-      filesCount: Object.keys(gpt5Result.files).length,
+      filesCount: Object.keys(currentFiles).length,
     };
   },
 });
