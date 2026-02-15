@@ -1,4 +1,4 @@
-import { task } from "@trigger.dev/sdk/v3";
+import { tasks } from "@trigger.dev/sdk/v3";
 import { Sandbox } from "@e2b/code-interpreter";
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
@@ -16,7 +16,7 @@ interface GenerateCodePayload {
   figmaData?: FigmaImportResult;
 }
 
-export const generateCode = task({
+export const generateCode = tasks({
   id: "generate-code",
   maxDuration: 300,
   retry: {
@@ -243,7 +243,7 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
       // DIRECT GPT-5.2 CALL (no helper function)
       console.log('📡 Calling GPT-5.2 API directly...');
       const response = await openai.chat.completions.create({
-        model: 'gpt-5.2',
+        model: 'gpt-4o',
         messages,
         tools,
         tool_choice: 'auto',
