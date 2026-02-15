@@ -1,4 +1,4 @@
-import { tasks } from "@trigger.dev/sdk/v3";
+import { task } from "@trigger.dev/sdk/v3";
 import { Sandbox } from "@e2b/code-interpreter";
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
@@ -16,7 +16,7 @@ interface GenerateCodePayload {
   figmaData?: FigmaImportResult;
 }
 
-export const generateCode = tasks({
+export const generateCode = task({
   id: "generate-code",
   maxDuration: 300,
   retry: {
