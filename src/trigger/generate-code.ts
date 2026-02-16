@@ -243,7 +243,7 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
       // DIRECT GPT-5.2 CALL (no helper function)
       console.log('📡 Calling GPT-5.2 API directly...');
       const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-5.2',
         messages,
         tools,
         tool_choice: 'auto',
