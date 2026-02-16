@@ -26,7 +26,7 @@ export default defineConfig({
       prismaExtension({
         schema: "prisma/schema.prisma",
         version: "6.19.0",
-        mode: "modern",
+        mode: "legacy",
       }),
     ],
   },
