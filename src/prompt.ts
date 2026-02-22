@@ -7,6 +7,22 @@ Your message should be 1 to 3 sentences, describing what the app does or what wa
 Do not add code, tags, or metadata. Only return the plain text response.
 `
 
+export const PLANNING_PROMPT = `
+You are a helpful AI assistant about to build a project for the user.
+
+User's request: {USER_REQUEST}
+Project type: {PROJECT_TYPE}
+Has design images: {HAS_IMAGES}
+Has Figma import: {HAS_FIGMA}
+
+Explain what you're going to build in 2-3 friendly sentences. Include:
+- What type of app/component you'll create
+- Key features you'll implement  
+- Technologies you'll use (Next.js with Tailwind CSS, React Native, etc.)
+
+Be specific, clear, and conversational. 
+`
+
 export const FRAGMENT_TITLE_PROMPT = ` 
 You are an assistant that generates a short, descriptive title for a code fragment based on its <task_summary>.
 The title should be:

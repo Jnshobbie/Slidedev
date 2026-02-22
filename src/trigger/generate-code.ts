@@ -3,7 +3,7 @@ import { Sandbox } from "@e2b/code-interpreter";
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
 import { prisma } from "@/lib/db";
-import { getPromptForProjectType, GPT52_CODE_AGENT_PROMPT } from "@/prompt";
+import { getPromptForProjectType, GPT52_CODE_AGENT_PROMPT, FRAGMENT_TITLE_PROMPT, RESPONSE_PROMPT, PLANNING_PROMPT } from "@/prompt";
 import { SANDBOX_TIMEOUT } from "@/inngest/types";
 import type { FigmaImportResult } from "@/lib/figma/types";
 
@@ -41,6 +41,34 @@ export const generateCode = task({
     const isMobile = projectType === "mobile";
 
     console.log(`🎯 Project type: ${projectType}`);
+
+    // 🆕 ADD THIS SECTION HERE - Start planning message
+    const planningPrompt = PLANNING_PROMPT
+      .replace('{USER_REQUEST}', value)
+      .replace('{PROJECT_TYPE}', projectType)
+      .replace('{HAS_IMAGES}', (attachments && attachments.length > 0) ? 'Yes' : 'No')
+      .replace('{HAS_FIGMA}', figmaData ? 'Yes' : 'No');
+
+    // Start GPT-4o planning in parallel (don't await yet)
+    const planningPromise = openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: planningPrompt },
+        { role: 'user', content: value }
+      ],
+      temperature: 0.7,
+    });
+
+    // Save initial thinking message
+    await prisma.message.create({
+      data: {
+        projectId,
+        content: "Analyzing your request...",
+        role: "ASSISTANT",
+        type: "RESULT",
+      },
+    });
+    // 🆕 END OF NEW SECTION
 
     // 2. Create sandbox for web projects
     let sandboxId: string | null = null;
@@ -338,12 +366,33 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
     console.log(`✅ GPT-5.2 completed in ${iterations} iterations`);
     console.log(`📝 Files created: ${Object.keys(currentFiles).length}`);
 
+    // 🆕 ADD THIS - Update planning message with GPT-4o's explanation
+    const planResp = await planningPromise;
+    const planText = planResp.choices[0]?.message?.content?.trim() || "Building your project...";
+
+    // Find and update the planning message
+    const planningMessage = await prisma.message.findFirst({
+      where: {
+        projectId,
+        content: "Analyzing your request...",
+      },
+    });
+
+    if (planningMessage) {
+      await prisma.message.update({
+        where: { id: planningMessage.id },
+        data: { content: planText },
+      });
+    }
+    // 🆕 END
+
+
     // 8. Generate title and response with GPT-4o
     const [titleResp, responseResp] = await Promise.all([
       openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
-          { role: 'system', content: 'Generate a short title (max 5 words) for this code project.' },
+          { role: 'system', content: FRAGMENT_TITLE_PROMPT },  // ← Use imported prompt
           { role: 'user', content: finalSummary }
         ],
         temperature: 0.4,
@@ -351,7 +400,7 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
       openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
-          { role: 'system', content: 'Generate a friendly response to the user explaining what you built.' },
+          { role: 'system', content: RESPONSE_PROMPT },  // ← Use imported prompt
           { role: 'user', content: finalSummary }
         ],
         temperature: 0.4,

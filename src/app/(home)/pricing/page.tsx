@@ -16,7 +16,7 @@ export default function PricingPage() {
     },
     {
       name: "Pro",
-      price: isYearly ? "300" : "29",
+      price: isYearly ? "170" : "15",
       desc: "For startups and creators who want full power.",
       features: ["Unlimited projects", "Premium templates", "Priority support"],
       button: "Get Pro",
