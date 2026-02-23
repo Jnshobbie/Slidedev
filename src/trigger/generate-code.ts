@@ -50,7 +50,7 @@ export const generateCode = task({
       .replace('{HAS_FIGMA}', figmaData ? 'Yes' : 'No');
 
     // Start GPT-4o planning in parallel (don't await yet)
-    const planningPromise = openai.chat.completions.create({
+    const planResp = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: planningPrompt },
@@ -59,11 +59,13 @@ export const generateCode = task({
       temperature: 0.7,
     });
 
+    const planText = planResp.choices[0]?.message?.content?.trim() || "Building your project...";
+
     // Save initial thinking message
     await prisma.message.create({
       data: {
         projectId,
-        content: "Analyzing your request...",
+        content: planText,  // Placeholder, will update later
         role: "ASSISTANT",
         type: "RESULT",
       },
@@ -365,26 +367,6 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
 
     console.log(`✅ GPT-5.2 completed in ${iterations} iterations`);
     console.log(`📝 Files created: ${Object.keys(currentFiles).length}`);
-
-    // 🆕 ADD THIS - Update planning message with GPT-4o's explanation
-    const planResp = await planningPromise;
-    const planText = planResp.choices[0]?.message?.content?.trim() || "Building your project...";
-
-    // Find and update the planning message
-    const planningMessage = await prisma.message.findFirst({
-      where: {
-        projectId,
-        content: "Analyzing your request...",
-      },
-    });
-
-    if (planningMessage) {
-      await prisma.message.update({
-        where: { id: planningMessage.id },
-        data: { content: planText },
-      });
-    }
-    // 🆕 END
 
 
     // 8. Generate title and response with GPT-4o
