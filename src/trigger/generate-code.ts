@@ -70,6 +70,16 @@ export const generateCode = task({
         type: "RESULT",
       },
     });
+
+    await prisma.message.create({
+      data: {
+        projectId,
+        content: "BUILDING_CODE",
+        role: "ASSISTANT",
+        type: "RESULT",
+      },
+    });
+
     // 🆕 END OF NEW SECTION
 
     // 2. Create sandbox for web projects
@@ -83,7 +93,7 @@ export const generateCode = task({
 
     // 3. Get previous messages
     const dbMessages = await prisma.message.findMany({
-      where: { projectId },
+      where: { projectId, NOT: { content: "BUILDING_CODE" } },
       orderBy: { createdAt: "desc" },
       take: 10,
     });
@@ -413,7 +423,12 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
           type: "ERROR",
         },
       });
+
     } else {
+      await prisma.message.deleteMany({
+        where: { projectId, content: "BUILDING_CODE" },
+      });
+
       await prisma.message.create({
         data: {
           projectId,
