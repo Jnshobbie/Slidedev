@@ -57,16 +57,20 @@ function generateImportId(): string {
 // POST - Plugin uploads frames (NO AUTH REQUIRED)
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json() as FigmaPluginExport;
+    const body = await req.json() as FigmaPluginExport & { 
+      importId?: string; 
+      batchIndex?: number; 
+      totalBatches?: number; 
+    };
     
     console.log('📦 Received Figma plugin export:');
     console.log('  File:', body.fileName);
     console.log('  Context:', body.context);
     console.log('  Frames:', body.frames?.length);
+    console.log('  Batch:', body.batchIndex, '/', body.totalBatches);
 
-    // Convert plugin data to attachment format
-    const attachments: Attachment[] = body.frames.map((frame) => ({
-      url: frame.imageData, // base64 data URL
+    const newAttachments: Attachment[] = body.frames.map((frame) => ({
+      url: frame.imageData,
       name: `${frame.name} (${frame.pageName})`,
       type: 'image/png',
       size: 0,
@@ -79,19 +83,25 @@ export async function POST(req: NextRequest) {
       }
     }));
 
-    console.log('✅ Converted to attachments format:', attachments.length);
+    let importId: string;
 
-    // Generate unique importId
-    const importId = generateImportId();
-
-    // Store temporarily
-    pluginExports.set(importId, {
-      attachments,
-      timestamp: Date.now()
-    });
-
-    console.log('💾 Stored export with importId:', importId);
-    console.log('📊 Current exports in memory:', pluginExports.size);
+    if (body.importId && pluginExports.has(body.importId)) {
+      // Append to existing import
+      importId = body.importId;
+      const existing = pluginExports.get(importId)!;
+      existing.attachments.push(...newAttachments);
+      existing.timestamp = Date.now();
+      console.log(`✅ Appended ${newAttachments.length} frames to ${importId}, total: ${existing.attachments.length}`);
+    } else {
+      // First batch — create new import
+      importId = generateImportId();
+      pluginExports.set(importId, {
+        attachments: newAttachments,
+        timestamp: Date.now()
+      });
+      console.log('💾 Stored export with importId:', importId);
+      console.log('📊 Current exports in memory:', pluginExports.size);
+    }
 
     return NextResponse.json(
       {
