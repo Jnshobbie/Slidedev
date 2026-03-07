@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       case "subscription_payment_failed":
       case "subscription_payment_refunded":
         await clerk.users.updateUser(user.id, {
-          publicMetadata: { plan: "free", credits: 5, billingStatus: "inactive" },
+          publicMetadata: { plan: "free", credits: 3, billingStatus: "inactive" },
         });
         break;
 

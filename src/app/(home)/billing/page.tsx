@@ -10,8 +10,8 @@ export default function BillingPage() {
 
   // 🧾 Lemon Squeezy product variants
   const checkoutLinks = {
-    monthly: `https://slidedevteam.lemonsqueezy.com/buy/b8a52983-c5d6-43b6-857a-5077687c0694?user_id=${user?.id}`,
-    yearly: `https://slidedevteam.lemonsqueezy.com/buy/abcd1234-variant-id-for-yearly?user_id=${user?.id}`, // Replace with your real yearly variant ID
+    monthly: `https://slidedevteam.lemonsqueezy.com/checkout/buy/5627e94d-d244-4233-9ac3-23528c0bbc4c`,
+    yearly: `https://slidedevteam.lemonsqueezy.com/checkout/buy/5627e94d-d244-4233-9ac3-23528c0bbc4c`, //  yearly variant ID
   };
 
   return (
@@ -53,7 +53,7 @@ export default function BillingPage() {
                 rel="noopener noreferrer"
               >
                 <button className="w-full py-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-md hover:from-blue-700 hover:to-blue-900 transition-all duration-300">
-                  $29 / month
+                  $14.99 / month
                 </button>
               </Link>
 
@@ -63,7 +63,7 @@ export default function BillingPage() {
                 rel="noopener noreferrer"
               >
                 <button className="w-full py-2 bg-gradient-to-r from-blue-700 to-blue-900 text-white rounded-md hover:from-blue-800 hover:to-black transition-all duration-300">
-                  $25 / month (billed yearly $300)
+                  $14.99 / month (billed yearly $170)
                 </button>
               </Link>
             </div>

@@ -48,8 +48,8 @@ export const ProjectForm = () => {
   const [projectType, setProjectType] = useState<ProjectType>("web");
 
   useEffect(() => {
-    console.log("🔎 Current attachments state:", attachments);
-    console.log("🔎 Attachments length:", attachments.length);
+    console.log(" Current attachments state:", attachments);
+    console.log(" Attachments length:", attachments.length);
     if (attachments.length > 0) {
       attachments.forEach((att, idx) => {
         console.log(`  [${idx}] ${att.name} - ${att.type} - ${att.url}`);
@@ -57,7 +57,7 @@ export const ProjectForm = () => {
     }
   }, [attachments]);
 
-  // ✅ UPDATED: ImportID Pattern - Production Ready
+  //  UPDATED: ImportID Pattern - Production Ready
   useEffect(() => {
     const checkForPluginExport = async () => {
       try {
@@ -66,11 +66,11 @@ export const ProjectForm = () => {
         const importId = urlParams.get('importId');
 
         if (!importId) {
-          console.log('ℹ️ No importId in URL');
+          console.log(' No importId in URL');
           return;
         }
 
-        console.log('🔍 Checking for plugin export with importId:', importId);
+        console.log(' Checking for plugin export with importId:', importId);
 
         const res = await fetch(`/api/figma/plugin-import?importId=${importId}`, {
           method: 'GET',
@@ -80,7 +80,7 @@ export const ProjectForm = () => {
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.attachments) {
-            console.log('🎨 Loading plugin export:', data.attachments.length, 'frames');
+            console.log(' Loading plugin export:', data.attachments.length, 'frames');
             setAttachments(prev => [...prev, ...data.attachments]);
             toast.success(`Loaded ${data.attachments.length} frame(s) from Figma plugin!`);
 
@@ -92,7 +92,7 @@ export const ProjectForm = () => {
           toast.error('Import not found or expired. Please try again.');
           window.history.replaceState({}, '', '/');
         } else if (res.status === 401) {
-          console.log('⚠️ Not authenticated - keeping importId in URL for after login');
+          console.log(' Not authenticated - keeping importId in URL for after login');
           // Don't clean URL - user needs to log in first
         } else {
           console.error('Error fetching export:', res.status);
@@ -132,20 +132,20 @@ export const ProjectForm = () => {
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    console.log("🎯 handleFileSelect called with files:", files.length);
+    console.log(" handleFileSelect called with files:", files.length);
     if (files.length === 0) {
-      console.log("⚠️ No files selected");
+      console.log(" No files selected");
       return;
     }
 
-    console.log("📤 Starting upload for files:", files.map(f => ({ name: f.name, type: f.type, size: f.size })));
+    console.log(" Starting upload for files:", files.map(f => ({ name: f.name, type: f.type, size: f.size })));
     setIsUploading(true);
     toast.loading(`Uploading ${files.length} file(s)...`, { id: "upload" });
 
     try {
       const uploadedFiles = await startUpload(files);
-      console.log("✅ Upload complete:", uploadedFiles);
-      console.log("✅ Upload complete - full response:", JSON.stringify(uploadedFiles, null, 2));
+      console.log(" Upload complete:", uploadedFiles);
+      console.log(" Upload complete - full response:", JSON.stringify(uploadedFiles, null, 2));
 
       if (uploadedFiles && uploadedFiles.length > 0) {
         const newAttachments: FileAttachment[] = uploadedFiles.map((uploadedFile, index) => {
@@ -156,26 +156,26 @@ export const ProjectForm = () => {
             size: originalFile.size,
             type: originalFile.type || uploadedFile.type || 'application/octet-stream',
           };
-          console.log(`🔎 Creating attachment [${index}]:`, attachment);
+          console.log(` Creating attachment [${index}]:`, attachment);
           return attachment;
         });
 
-        console.log("🔎 New attachments array:", newAttachments);
+        console.log(" New attachments array:", newAttachments);
         setAttachments(prev => {
           const updated = [...prev, ...newAttachments];
-          console.log("📋 Updated attachments state:", updated);
-          console.log("📋 Updated attachments length:", updated.length);
+          console.log(" Updated attachments state:", updated);
+          console.log(" Updated attachments length:", updated.length);
           return updated;
         });
         toast.success(`${files.length} file(s) uploaded successfully`, { id: "upload" });
       } else {
-        console.error("❌ No files returned from upload or empty array");
-        console.error("❌ Upload response:", uploadedFiles);
+        console.error(" No files returned from upload or empty array");
+        console.error(" Upload response:", uploadedFiles);
         toast.error("Upload failed - no files returned", { id: "upload" });
       }
     } catch (error) {
-      console.error("❌ Upload error:", error);
-      console.error("❌ Upload error details:", JSON.stringify(error, null, 2));
+      console.error(" Upload error:", error);
+      console.error(" Upload error details:", JSON.stringify(error, null, 2));
       toast.error("Failed to upload files", { id: "upload" });
     } finally {
       setIsUploading(false);
@@ -190,12 +190,12 @@ export const ProjectForm = () => {
   };
 
   const triggerFileInput = (type: 'image' | 'video' | 'pdf') => {
-    console.log("🖱️ Triggering file input for type:", type);
+    console.log(" Triggering file input for type:", type);
     const input = fileInputRefs[type].current;
     if (input) {
       input.click();
     } else {
-      console.error("❌ File input ref not found for type:", type);
+      console.error(" File input ref not found for type:", type);
     }
   };
 
@@ -205,7 +205,7 @@ export const ProjectForm = () => {
   };
 
   const handleFigmaImport = (frameImages: Array<{ url: string; name: string }>) => {
-    console.log('🎨 Figma frames imported:', frameImages);
+    console.log(' Figma frames imported:', frameImages);
 
     const imageAttachments: FileAttachment[] = frameImages.map(frame => ({
       url: frame.url,
@@ -274,7 +274,7 @@ export const ProjectForm = () => {
                 const isImage = file.type?.startsWith('image/') ?? false;
                 const uniqueKey = `${file.url}-${index}`;
 
-                console.log(`🎨 Rendering preview for [${index}]:`, {
+                console.log(` Rendering preview for [${index}]:`, {
                   name: file.name,
                   type: file.type,
                   url: file.url,
@@ -293,12 +293,12 @@ export const ProjectForm = () => {
                           alt={file.name}
                           className="object-cover rounded-lg w-full h-full"
                           onError={(e) => {
-                            console.error("❌ Image load error:", file.url, e);
+                            console.error(" Image load error:", file.url, e);
                             const target = e.target as HTMLImageElement;
                             target.style.display = 'none';
                           }}
                           onLoad={() => {
-                            console.log("✅ Image loaded successfully:", file.url);
+                            console.log(" Image loaded successfully:", file.url);
                           }}
                         />
                         <button

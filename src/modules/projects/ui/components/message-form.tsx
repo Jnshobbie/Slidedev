@@ -89,19 +89,19 @@ export const MessageForm = ({ projectId }: Props) => {
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
-        console.log("🎯 handleFileSelect called with files:", files.length);
+        console.log(" handleFileSelect called with files:", files.length);
         if (files.length === 0) {
             console.log("⚠️ No files selected");
             return;
         }
 
-        console.log("📤 Starting upload for files:", files.map(f => ({ name: f.name, type: f.type, size: f.size })));
+        console.log(" Starting upload for files:", files.map(f => ({ name: f.name, type: f.type, size: f.size })));
         setIsUploading(true);
         toast.loading(`Uploading ${files.length} file(s)...`, { id: "upload" });
         
         try {
             const uploadedFiles = await startUpload(files);
-            console.log("✅ Upload complete:", uploadedFiles);
+            console.log(" Upload complete:", uploadedFiles);
             
             if (uploadedFiles && uploadedFiles.length > 0) {
                 const newAttachments: FileAttachment[] = uploadedFiles.map((uploadedFile, index) => {
@@ -112,23 +112,23 @@ export const MessageForm = ({ projectId }: Props) => {
                         size: originalFile.size,
                         type: originalFile.type || uploadedFile.type || 'application/octet-stream',
                     };
-                    console.log(`🔎 Creating attachment [${index}]:`, attachment);
+                    console.log(` Creating attachment [${index}]:`, attachment);
                     return attachment;
                 });
                 
-                console.log("🔎 New attachments array:", newAttachments);
+                console.log(" New attachments array:", newAttachments);
                 setAttachments(prev => {
                     const updated = [...prev, ...newAttachments];
-                    console.log("📋 Updated attachments state:", updated);
+                    console.log(" Updated attachments state:", updated);
                     return updated;
                 });
                 toast.success(`${files.length} file(s) uploaded successfully`, { id: "upload" });
             } else {
-                console.error("❌ No files returned from upload");
+                console.error(" No files returned from upload");
                 toast.error("Upload failed - no files returned", { id: "upload" });
             }
         } catch (error) {
-            console.error("❌ Upload error:", error);
+            console.error(" Upload error:", error);
             toast.error("Failed to upload files", { id: "upload" });
         } finally {
             setIsUploading(false);
@@ -137,12 +137,12 @@ export const MessageForm = ({ projectId }: Props) => {
     };
 
     const triggerFileInput = (type: 'image' | 'video' | 'pdf') => {
-        console.log("🖱️ Triggering file input for type:", type);
+        console.log(" Triggering file input for type:", type);
         const input = fileInputRefs[type].current;
         if (input) {
             input.click();
         } else {
-            console.error("❌ File input ref not found for type:", type);
+            console.error(" File input ref not found for type:", type);
         }
     };
 
