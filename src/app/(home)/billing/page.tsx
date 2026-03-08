@@ -1,18 +1,19 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { useTRPC } from "@/trpc/client";
 
 export default function BillingPage() {
-  const { user } = useUser();
-  const plan = (user?.publicMetadata?.plan as string) || "free";
+  const trpc = useTRPC();
+  const { data: subscription } = useQuery(trpc.usage.subscription.queryOptions());
 
-  // 🧾 Lemon Squeezy product variants
-  const checkoutLinks = {
-    monthly: `https://slidedevteam.lemonsqueezy.com/checkout/buy/5627e94d-d244-4233-9ac3-23528c0bbc4c`,
-    yearly: `https://slidedevteam.lemonsqueezy.com/checkout/buy/5627e94d-d244-4233-9ac3-23528c0bbc4c`, //  yearly variant ID
-  };
+  const plan = subscription?.plan || "free";
+  const status = subscription?.status || "inactive";
+  const expiresAt = subscription?.expiresAt;
+
+  const checkoutLink = `https://slidedevteam.lemonsqueezy.com/checkout/buy/5627e94d-d244-4233-9ac3-23528c0bbc4c`;
 
   return (
     <div className="flex flex-col items-center max-w-2xl mx-auto w-full pt-[15vh] px-6">
@@ -41,42 +42,42 @@ export default function BillingPage() {
           </span>
         </div>
 
+        {plan === "pro" && expiresAt && (
+          <p className="text-sm mt-3 text-muted-foreground">
+            {status === "active"
+              ? `Renews on ${new Date(expiresAt).toLocaleDateString()}`
+              : `Expires on ${new Date(expiresAt).toLocaleDateString()}`}
+          </p>
+        )}
+
         {plan === "free" ? (
           <>
             <p className="text-sm mt-4 text-muted-foreground">
               Upgrade to unlock more credits and full access to all features.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
-              <Link
-                href={checkoutLinks.monthly}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <Link href={checkoutLink} target="_blank" rel="noopener noreferrer">
                 <button className="w-full py-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-md hover:from-blue-700 hover:to-blue-900 transition-all duration-300">
                   $14.99 / month
                 </button>
               </Link>
-
-              <Link
-                href={checkoutLinks.yearly}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <Link href={checkoutLink} target="_blank" rel="noopener noreferrer">
                 <button className="w-full py-2 bg-gradient-to-r from-blue-700 to-blue-900 text-white rounded-md hover:from-blue-800 hover:to-black transition-all duration-300">
-                  $14.99 / month (billed yearly $170)
+                  $14 / month (billed yearly $170)
                 </button>
               </Link>
             </div>
           </>
         ) : (
-          <button
-            onClick={() =>
-              alert("To cancel, contact support or manage via Lemon Squeezy.")
-            }
-            className="mt-6 w-full py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition"
+          <Link
+            href="https://app.lemonsqueezy.com/my-orders"
+            target="_blank"
+            rel="noopener noreferrer"
           >
-            Manage Subscription
-          </button>
+            <button className="mt-6 w-full py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition">
+              Manage Subscription
+            </button>
+          </Link>
         )}
       </div>
     </div>

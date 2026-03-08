@@ -69,3 +69,14 @@ model Usage {
   points Int 
   expire DateTime?
 }
+
+model Subscription {
+  id                 String    @id @default(uuid())
+  userId             String    @unique
+  plan               String    @default("free")
+  status             String    @default("inactive")
+  expiresAt          DateTime?
+  lsSubscriptionId   String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}

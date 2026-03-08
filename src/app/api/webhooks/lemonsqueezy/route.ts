@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { clerkClient } from "@clerk/nextjs/server";
+import { prisma } from "@/lib/db";
 
 const LEMON_SECRET = process.env.LEMONSQUEEZY_SIGNING_SECRET as string;
 
@@ -19,12 +20,13 @@ export async function POST(req: Request) {
     const event = JSON.parse(body);
     const eventType = event.meta?.event_name;
     const customerEmail = event.data?.attributes?.user_email;
+    const lsSubscriptionId = event.data?.id as string;
+    const endsAt = event.data?.attributes?.ends_at as string | null;
 
     if (!customerEmail) {
       return NextResponse.json({ error: "Missing customer email" }, { status: 400 });
     }
 
-    // ✅ Get user by email
     const clerk = await clerkClient();
     const usersResponse = await clerk.users.getUserList({ emailAddress: [customerEmail] });
     if (!usersResponse.data || usersResponse.data.length === 0) {
@@ -33,13 +35,25 @@ export async function POST(req: Request) {
 
     const user = usersResponse.data[0];
 
-    // Handle subscription events
     switch (eventType) {
       case "subscription_created":
       case "subscription_resumed":
       case "subscription_payment_success":
-        await clerk.users.updateUser(user.id, {
-          publicMetadata: { plan: "pro", credits: 100, billingStatus: "active" },
+        await prisma.subscription.upsert({
+          where: { userId: user.id },
+          update: {
+            plan: "pro",
+            status: "active",
+            lsSubscriptionId,
+            expiresAt: endsAt ? new Date(endsAt) : null,
+          },
+          create: {
+            userId: user.id,
+            plan: "pro",
+            status: "active",
+            lsSubscriptionId,
+            expiresAt: endsAt ? new Date(endsAt) : null,
+          },
         });
         break;
 
@@ -47,8 +61,19 @@ export async function POST(req: Request) {
       case "subscription_expired":
       case "subscription_payment_failed":
       case "subscription_payment_refunded":
-        await clerk.users.updateUser(user.id, {
-          publicMetadata: { plan: "free", credits: 3, billingStatus: "inactive" },
+        await prisma.subscription.upsert({
+          where: { userId: user.id },
+          update: {
+            plan: "free",
+            status: "inactive",
+            expiresAt: endsAt ? new Date(endsAt) : null,
+          },
+          create: {
+            userId: user.id,
+            plan: "free",
+            status: "inactive",
+            expiresAt: null,
+          },
         });
         break;
 
