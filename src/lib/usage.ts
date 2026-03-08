@@ -9,21 +9,22 @@ const DURATION = 30 * 24 * 60 * 60; // 30 days
 const GENERATION_COST = 1;
 
 export async function getUsageTracker() {
-    const { has } = await auth(); 
-    const hasProAccess = has({ plan: "pro"})
+    const { has } = await auth();
+    const hasProAccess = has({ plan: "pro" })
 
     const usageTracker = new RateLimiterPrisma({
         storeClient: prisma,
         tableName: "usage",
         points: hasProAccess ? PRO_POINTS : FREE_POINTS,
-        duration: DURATION, 
+        duration: DURATION,
+        keyPrefix: hasProAccess ? "pro" : "free",
     });
 
     return usageTracker;
 };
 
 export async function consumeCredits() {
-    const { userId } = await auth(); 
+    const { userId } = await auth();
 
     if (!userId) {
         throw new Error("User not authenticated");
@@ -35,12 +36,12 @@ export async function consumeCredits() {
 };
 
 export async function getUsageStatus() {
-    const { userId } = await auth(); 
+    const { userId } = await auth();
 
     if (!userId) {
         throw new Error("User not authenticated");
     }
-    const usageTracker = await getUsageTracker(); 
+    const usageTracker = await getUsageTracker();
     const result = await usageTracker.get(userId);
-    return result; 
+    return result;
 };
