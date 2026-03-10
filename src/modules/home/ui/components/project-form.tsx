@@ -383,9 +383,9 @@ export const ProjectForm = () => {
                 disabled={isPending}
               />
 
-              {isPro && (
+              
                 <ModelSelector value={model} onChange={setModel} disabled={isPending} />
-              )}
+              
 
               {/* File Upload Dropdown */}
               <DropdownMenu>
