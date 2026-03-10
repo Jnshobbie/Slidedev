@@ -40,7 +40,7 @@ export default function PricingPage() {
       name: "Pro",
       price: isYearly ? "170" : "14.99",
       desc: "For startups and creators who want full power.",
-      features: ["100 credits, Unlimited projects", "Premium templates", "Priority support", "Unlimited figma import"],
+      features: ["100 credits", "Unlimited projects", "Premium templates", "Priority support", "Unlimited figma import"],
       highlighted: true,
     },
   ];
