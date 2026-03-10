@@ -56,6 +56,7 @@ export const projectsRouter = createTRPCRouter({
         projectType: z.enum(["web", "mobile"]).default("web"),
         attachments: z.array(fileAttachmentSchema).optional(),
         figmaData: z.custom<FigmaImportResult>().optional(),
+        model: z.string().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -75,6 +76,7 @@ export const projectsRouter = createTRPCRouter({
 
       const createdProject = await prisma.project.create({
         data: {
+          model: "gpt-5.2", // default, user can change later
           userId: ctx.auth.userId,
           name: generateSlug(2, {
             format: "kebab",
@@ -96,6 +98,7 @@ export const projectsRouter = createTRPCRouter({
 
       await generateCode.trigger({
         projectId: createdProject.id,
+        model: createdProject.model,
         value: input.value,
         attachments: input.attachments,
         figmaData: input.figmaData,

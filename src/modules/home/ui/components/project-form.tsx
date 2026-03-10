@@ -18,6 +18,8 @@ import { PROJECT_TEMPLATES } from "../../constants";
 import { useClerk } from "@clerk/nextjs";
 import { useUploadThing } from "@/lib/uploadthing";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { ModelSelector } from "@/components/model-selector";
 import { ProjectTypeSelector, type ProjectType } from "@/components/project-type-selector";
 import {
   DropdownMenu,
@@ -44,8 +46,11 @@ export const ProjectForm = () => {
   const trpc = useTRPC();
   const clerk = useClerk();
   const queryClient = useQueryClient();
+  const { data: subscription } = useQuery(trpc.usage.subscription.queryOptions());
+  const isPro = subscription?.plan === "pro";
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const [projectType, setProjectType] = useState<ProjectType>("web");
+  const [model, setModel] = useState("gpt-5.2");
 
   useEffect(() => {
     console.log(" Current attachments state:", attachments);
@@ -237,6 +242,7 @@ export const ProjectForm = () => {
       value: values.value,
       projectType,
       attachments: attachments.length > 0 ? attachments : undefined,
+      model, // 
     });
   };
 
@@ -376,6 +382,10 @@ export const ProjectForm = () => {
                 onChange={setProjectType}
                 disabled={isPending}
               />
+
+              {isPro && (
+                <ModelSelector value={model} onChange={setModel} disabled={isPending} />
+              )}
 
               {/* File Upload Dropdown */}
               <DropdownMenu>

@@ -6,12 +6,14 @@ import { prisma } from "@/lib/db";
 import { getPromptForProjectType, GPT52_CODE_AGENT_PROMPT, FRAGMENT_TITLE_PROMPT, RESPONSE_PROMPT, PLANNING_PROMPT } from "@/prompt";
 import { SANDBOX_TIMEOUT } from "@/inngest/types";
 import type { FigmaImportResult } from "@/lib/figma/types";
+import Anthropic from "@anthropic-ai/sdk";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 interface GenerateCodePayload {
   projectId: string;
   value: string;
+  model?: string;
   attachments?: Array<{ url: string; type: string; name: string; size: number }>;
   figmaData?: FigmaImportResult;
 }
@@ -34,9 +36,10 @@ export const generateCode = task({
     // 1. Get project type
     const project = await prisma.project.findUnique({
       where: { id: projectId },
-      select: { projectType: true },
+      select: { projectType: true, model: true },
     });
 
+    const selectedModel = payload.model || project?.model || "gpt-5.2";
     const projectType = (project?.projectType as "web" | "mobile") || "web";
     const isMobile = projectType === "mobile";
 
@@ -276,6 +279,194 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
 
     console.log('🤖 Starting GPT-5.2 direct loop');
 
+    if (selectedModel === "claude-opus-4-6") {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  // Format messages for Claude
+  const claudeMessages: Anthropic.MessageParam[] = formattedMessages.map(msg => ({
+    role: msg.role === "ASSISTANT" ? "assistant" : "user",
+    content: Array.isArray(msg.content)
+      ? msg.content.map((part: { type: string; text?: string; image_url?: { url: string } }) => {
+          if (part.type === "text") return { type: "text" as const, text: part.text ?? "" };
+          if (part.type === "image_url") return {
+            type: "image" as const,
+            source: { type: "url" as const, url: part.image_url?.url ?? "" },
+          };
+          return { type: "text" as const, text: "" };
+        })
+      : msg.content as string,
+  }));
+
+  // Claude tool definitions
+  const claudeTools: Anthropic.Tool[] = isMobile ? [
+    {
+      name: "createOrUpdateFiles",
+      description: "Create or update React Native files",
+      input_schema: {
+        type: "object" as const,
+        properties: {
+          files: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                path: { type: "string" },
+                content: { type: "string" },
+              },
+              required: ["path", "content"],
+            },
+          },
+        },
+        required: ["files"],
+      },
+    },
+  ] : [
+    {
+      name: "terminal",
+      description: "Run terminal commands",
+      input_schema: {
+        type: "object" as const,
+        properties: { command: { type: "string" } },
+        required: ["command"],
+      },
+    },
+    {
+      name: "createOrUpdateFiles",
+      description: "Create or update files in Next.js sandbox",
+      input_schema: {
+        type: "object" as const,
+        properties: {
+          files: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                path: { type: "string" },
+                content: { type: "string" },
+              },
+              required: ["path", "content"],
+            },
+          },
+        },
+        required: ["files"],
+      },
+    },
+    {
+      name: "readFiles",
+      description: "Read files from sandbox",
+      input_schema: {
+        type: "object" as const,
+        properties: {
+          files: { type: "array", items: { type: "string" } },
+        },
+        required: ["files"],
+      },
+    },
+  ];
+
+  let claudeIterations = 0;
+
+  while (claudeIterations < maxIterations) {
+    claudeIterations++;
+    console.log(`🔄 Claude iteration ${claudeIterations}/${maxIterations}`);
+
+    const response = await anthropic.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: 8096,
+      system: systemPrompt,
+      tools: claudeTools,
+      messages: claudeMessages,
+    });
+
+    console.log("✅ Claude API call successful");
+
+    // Build assistant message from response
+    const assistantContent: Anthropic.ContentBlock[] = [];
+
+    for (const block of response.content) {
+      if (block.type === "text") {
+        assistantContent.push(block);
+        if (block.text.includes("<task_summary>")) {
+          console.log("✅ Claude task complete");
+          finalSummary = block.text;
+        }
+      } else if (block.type === "tool_use") {
+        assistantContent.push(block);
+      }
+    }
+
+    claudeMessages.push({ role: "assistant", content: assistantContent });
+
+    if (finalSummary) break;
+
+    if (response.stop_reason === "tool_use") {
+      const toolResults: Anthropic.ToolResultBlockParam[] = [];
+
+      for (const block of response.content) {
+        if (block.type !== "tool_use") continue;
+
+        const { name, input, id } = block;
+        let toolResult = "";
+
+        console.log(`→ ${name}`);
+
+        if (name === "createOrUpdateFiles") {
+          const { files } = input as { files: { path: string; content: string }[] };
+          if (!isMobile && sandboxId) {
+            const sandbox = await Sandbox.connect(sandboxId);
+            await sandbox.setTimeout(SANDBOX_TIMEOUT);
+            for (const file of files) {
+              await sandbox.files.write(file.path, file.content);
+              currentFiles[file.path] = file.content;
+            }
+          } else {
+            for (const file of files) {
+              currentFiles[file.path] = file.content;
+            }
+          }
+          toolResult = "Files created successfully";
+
+        } else if (name === "terminal" && sandboxId) {
+          const { command } = input as { command: string };
+          const sandbox = await Sandbox.connect(sandboxId);
+          await sandbox.setTimeout(SANDBOX_TIMEOUT);
+          const result = await sandbox.commands.run(command);
+          toolResult = result.stdout;
+
+        } else if (name === "readFiles" && sandboxId) {
+          const { files } = input as { files: string[] };
+          const sandbox = await Sandbox.connect(sandboxId);
+          await sandbox.setTimeout(SANDBOX_TIMEOUT);
+          const contents = [];
+          for (const filePath of files) {
+            const content = await sandbox.files.read(filePath);
+            contents.push({ path: filePath, content });
+          }
+          toolResult = JSON.stringify(contents);
+        }
+
+        toolResults.push({
+          type: "tool_result",
+          tool_use_id: id,
+          content: toolResult || "Tool execution completed",
+        });
+      }
+
+      claudeMessages.push({ role: "user", content: toolResults });
+
+    } else if (response.stop_reason === "end_turn" && !finalSummary) {
+      console.log("⚠️ Claude stopped without task_summary, prompting to continue");
+      claudeMessages.push({
+        role: "user",
+        content: "Continue with the task. Use the available tools and finish with a <task_summary>.",
+      });
+    }
+  }
+
+  console.log(`✅ Claude completed in ${claudeIterations} iterations`);
+
+} else {
+
     while (iterations < maxIterations) {
       iterations++;
       console.log(`🔄 Iteration ${iterations}/${maxIterations}`);
@@ -283,7 +474,7 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
       // DIRECT GPT-5.2 CALL (no helper function)
       console.log('📡 Calling GPT-5.2 API directly...');
       const response = await openai.chat.completions.create({
-        model: 'gpt-5.2',
+        model: selectedModel,
         messages,
         tools,
         tool_choice: 'auto',
@@ -377,7 +568,7 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
 
     console.log(`✅ GPT-5.2 completed in ${iterations} iterations`);
     console.log(`📝 Files created: ${Object.keys(currentFiles).length}`);
-
+  }
 
     // 8. Generate title and response with GPT-4o
     const [titleResp, responseResp] = await Promise.all([

@@ -47,6 +47,7 @@ export const messagesRouter = createTRPCRouter({
         projectId: z.string().min(1, { message: "Project ID is required" }),
         projectType: z.enum(["web", "mobile"]).optional(), // NEW: Optional projectType (form selector)
         attachments: z.array(fileAttachmentSchema).optional(),
+        model: z.string().optional(), // NEW: Optional model field for message-level model selection
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -91,6 +92,7 @@ export const messagesRouter = createTRPCRouter({
       // This avoids HTTP fetch issues and runs in the same process
       await generateCode.trigger({
         projectId: existingProject.id,
+        model: existingProject.model,
         value: input.value,
         attachments: input.attachments,
       });
