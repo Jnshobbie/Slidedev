@@ -291,9 +291,9 @@ export const MessageForm = ({ projectId }: Props) => {
                             className="hidden"
                         />
 
-                        {isPro && (
-                            <ModelSelector value={model} onChange={setModel} />
-                        )}
+                        
+                        <ModelSelector value={model} onChange={setModel} disabled={isPending} isPro={isPro} />
+                        
 
                         {/* File Upload Dropdown */}
                         <DropdownMenu>
