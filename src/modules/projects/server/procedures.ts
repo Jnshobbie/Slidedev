@@ -76,7 +76,7 @@ export const projectsRouter = createTRPCRouter({
 
       const createdProject = await prisma.project.create({
         data: {
-          model: "gpt-5.2", // default, user can change later
+          model: input.model || "gpt-5.2", // default, user can change later
           userId: ctx.auth.userId,
           name: generateSlug(2, {
             format: "kebab",

@@ -3,20 +3,19 @@
 
 import { z } from "zod";
 import { toast } from "sonner";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import TextareaAutosize from "react-textarea-autosize";
 import { ArrowUpIcon, Loader2Icon, PlusIcon, XIcon, ImageIcon, VideoIcon, FileTextIcon } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Image from "next/image";
 
 import { cn } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
 import { Form, FormField } from "@/components/ui/form";
 import { Usage } from "./usage";
 import { useRouter } from "next/navigation";
-import { ModelSelector } from "@/components/model-selector"; 
+import { ModelSelector } from "@/components/model-selector";
 import { useUploadThing } from "@/lib/uploadthing";
 import {
     DropdownMenu,
@@ -49,9 +48,14 @@ export const MessageForm = ({ projectId }: Props) => {
     const queryClient = useQueryClient();
 
     const { data: usage } = useQuery(trpc.usage.status.queryOptions());
+    const { data: project } = useQuery(trpc.projects.getOne.queryOptions({ id: projectId }));
     const [attachments, setAttachments] = useState<FileAttachment[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [model, setModel] = useState("gpt-5.2");
+
+    useEffect(() => {
+        if (project?.model) setModel(project.model);
+    }, [project?.model]);
 
     const { startUpload } = useUploadThing("messageAttachment");
 
@@ -291,9 +295,9 @@ export const MessageForm = ({ projectId }: Props) => {
                             className="hidden"
                         />
 
-                        
+
                         <ModelSelector value={model} onChange={setModel} disabled={isPending} isPro={isPro} />
-                        
+
 
                         {/* File Upload Dropdown */}
                         <DropdownMenu>
