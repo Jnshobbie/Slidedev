@@ -38,24 +38,46 @@ export async function POST(req: Request) {
     switch (eventType) {
       case "subscription_created":
       case "subscription_resumed":
-      case "subscription_payment_success":
+      case "subscription_payment_success": {
+        const variantId = event.data?.attributes?.variant_id as number | null;
+
+        // Get your variant IDs from LemonSqueezy dashboard
+        const YEARLY_VARIANT_ID = process.env.LS_YEARLY_VARIANT_ID
+          ? parseInt(process.env.LS_YEARLY_VARIANT_ID)
+          : null;
+
+        // If LemonSqueezy provides ends_at use it, otherwise calculate from variant
+        let expiresAt: Date | null = null;
+        if (endsAt) {
+          expiresAt = new Date(endsAt);
+        } else if (variantId && YEARLY_VARIANT_ID && variantId === YEARLY_VARIANT_ID) {
+          // Yearly plan — expire in 1 year
+          expiresAt = new Date();
+          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        } else {
+          // Monthly plan — expire in 30 days
+          expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + 30);
+        }
+
         await prisma.subscription.upsert({
           where: { userId: user.id },
           update: {
             plan: "pro",
             status: "active",
             lsSubscriptionId,
-            expiresAt: endsAt ? new Date(endsAt) : null,
+            expiresAt,
           },
           create: {
             userId: user.id,
             plan: "pro",
             status: "active",
             lsSubscriptionId,
-            expiresAt: endsAt ? new Date(endsAt) : null,
+            expiresAt,
           },
         });
         break;
+      }
 
       case "subscription_cancelled":
       case "subscription_expired":

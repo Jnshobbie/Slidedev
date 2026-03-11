@@ -39,7 +39,7 @@ export function ModelSelector({ value, onChange, disabled, isPro }: ModelSelecto
         className={cn(
           "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-all",
           "border border-border bg-muted/50 hover:bg-muted text-foreground",
-          "outline-none focus:outline-none focus:ring-0",
+          "outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0", // 👈
           disabled && "opacity-50 cursor-not-allowed"
         )}
       >
@@ -75,7 +75,8 @@ export function ModelSelector({ value, onChange, disabled, isPro }: ModelSelecto
                     }
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between px-3 py-2.5 text-sm transition-all outline-none",
+                    "w-full flex items-center justify-between px-3 py-2.5 text-sm transition-all",
+                    "outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0", // 👈
                     isSelected && "bg-muted",
                     !isLocked && !isSelected && "hover:bg-muted/60",
                     isLocked && "cursor-pointer"
