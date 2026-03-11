@@ -72,7 +72,7 @@ export function ModelSelector({ value, onChange, disabled, isPro }: ModelSelecto
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
         {MODELS.map(model => {
-          const isLocked = model.proOnly && !isPro;
+          const isLocked = false;
           const isSelected = value === model.id;
 
           return (
