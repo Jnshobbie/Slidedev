@@ -1,7 +1,7 @@
 // src/components/project-type-selector.tsx
 "use client";
 
-import { Monitor, Smartphone, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,

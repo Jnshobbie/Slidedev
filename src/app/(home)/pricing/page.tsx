@@ -27,6 +27,7 @@ export default function PricingPage() {
     { name: "Community Support", free: true, pro: true },
     { name: "Figma Import", free: false, pro: true },
     { name: "Project Export", free: false, pro: true },
+    { name: "Better AI models", free: false, pro: true },
   ];
 
   const plans = [
@@ -40,7 +41,7 @@ export default function PricingPage() {
       name: "Pro",
       price: isYearly ? "170" : "14.99",
       desc: "For startups and creators who want full power.",
-      features: ["100 credits", "Unlimited projects", "Premium templates", "Priority support", "Unlimited figma import"],
+      features: ["100 credits", "Unlimited projects", "Premium templates", "Priority support", "Unlimited figma import", "Unlimited project export", "Better AI models"],
       highlighted: true,
     },
   ];
