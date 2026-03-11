@@ -3,7 +3,6 @@
 import { cn } from "@/lib/utils";
 import { ChevronDownIcon, LockIcon } from "lucide-react";
 import { useState } from "react";
-import Link from "next/link";
 
 const MODELS = [
   {
@@ -40,6 +39,7 @@ export function ModelSelector({ value, onChange, disabled, isPro }: ModelSelecto
         className={cn(
           "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-all",
           "border border-border bg-muted/50 hover:bg-muted text-foreground",
+          "outline-none focus:outline-none focus:ring-0",
           disabled && "opacity-50 cursor-not-allowed"
         )}
       >
@@ -65,8 +65,11 @@ export function ModelSelector({ value, onChange, disabled, isPro }: ModelSelecto
                 <button
                   key={model.id}
                   type="button"
+                  // Replace the isLocked button onClick:
                   onClick={() => {
-                    if (!isLocked) {
+                    if (isLocked) {
+                      window.location.href = "/pricing"; // redirect to pricing
+                    } else {
                       onChange(model.id);
                       setOpen(false);
                     }
@@ -83,14 +86,10 @@ export function ModelSelector({ value, onChange, disabled, isPro }: ModelSelecto
                     <span className="font-medium">{model.label}</span>
                   </div>
                   {isLocked ? (
-                    <Link
-                      href="/pricing"
-                      onClick={e => e.stopPropagation()}
-                      className="flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300 font-medium"
-                    >
+                    <span className="flex items-center gap-1 text-[10px] text-blue-400 font-medium">
                       <LockIcon className="size-3" />
                       Upgrade
-                    </Link>
+                    </span>
                   ) : isSelected ? (
                     <span className="text-[10px] text-muted-foreground">Active</span>
                   ) : null}
