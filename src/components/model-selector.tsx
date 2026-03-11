@@ -75,10 +75,10 @@ export function ModelSelector({ value, onChange, disabled, isPro }: ModelSelecto
                     }
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between px-3 py-2.5 text-sm transition-all",
+                    "w-full flex items-center justify-between px-3 py-2.5 text-sm transition-all outline-none",
                     isSelected && "bg-muted",
                     !isLocked && !isSelected && "hover:bg-muted/60",
-                    isLocked && "opacity-60 cursor-not-allowed"
+                    isLocked && "cursor-pointer"
                   )}
                 >
                   <div className="flex items-center gap-2">
