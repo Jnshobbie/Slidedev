@@ -1,8 +1,14 @@
 "use client";
 
+import { ChevronDown, LockIcon } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon, LockIcon } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const MODELS = [
   {
@@ -27,79 +33,80 @@ interface ModelSelectorProps {
 }
 
 export function ModelSelector({ value, onChange, disabled, isPro }: ModelSelectorProps) {
-  const [open, setOpen] = useState(false);
+  const router = useRouter();
   const selectedModel = MODELS.find(m => m.id === value) || MODELS[0];
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => setOpen(prev => !prev)}
-        className={cn(
-          "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-all",
-          "border border-border bg-muted/50 hover:bg-muted text-foreground",
-          "outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0", // 👈
-          disabled && "opacity-50 cursor-not-allowed"
-        )}
-      >
-        <span>{selectedModel.icon}</span>
-        <span>{selectedModel.label}</span>
-        <ChevronDownIcon className="size-3 text-muted-foreground" />
-      </button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          disabled={disabled}
+          style={{
+            backgroundColor: "rgba(39, 39, 42, 0.8)",
+            border: "1px solid rgba(113, 113, 122, 0.5)",
+            borderRadius: "8px",
+            padding: "6px 10px",
+            color: "#e4e4e7",
+            fontSize: "12px",
+            fontWeight: 500,
+            transition: "all 0.2s ease",
+            cursor: disabled ? "not-allowed" : "pointer",
+            opacity: disabled ? 0.5 : 1,
+            outline: "none",
+            boxShadow: "none",
+          }}
+          className="inline-flex items-center gap-1.5"
+          onMouseEnter={(e) => {
+            if (!disabled) {
+              e.currentTarget.style.backgroundColor = "rgba(63, 63, 70, 0.8)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "rgba(39, 39, 42, 0.8)";
+          }}
+        >
+          <span>{selectedModel.icon}</span>
+          <span>{selectedModel.label}</span>
+          <ChevronDown style={{ width: "14px", height: "14px", opacity: 0.6 }} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-56">
+        {MODELS.map(model => {
+          const isLocked = model.proOnly && !isPro;
+          const isSelected = value === model.id;
 
-      {open && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setOpen(false)}
-          />
-          {/* Dropdown */}
-          <div className="absolute bottom-full mb-2 left-0 z-20 w-52 rounded-xl border border-border bg-popover shadow-lg overflow-hidden">
-            {MODELS.map(model => {
-              const isLocked = model.proOnly && !isPro;
-              const isSelected = value === model.id;
-
-              return (
-                <button
-                  key={model.id}
-                  type="button"
-                  // Replace the isLocked button onClick:
-                  onClick={() => {
-                    if (isLocked) {
-                      window.location.href = "/pricing"; // redirect to pricing
-                    } else {
-                      onChange(model.id);
-                      setOpen(false);
-                    }
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between px-3 py-2.5 text-sm transition-all",
-                    "outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0", // 👈
-                    isSelected && "bg-muted",
-                    !isLocked && !isSelected && "hover:bg-muted/60",
-                    isLocked && "cursor-pointer"
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <span>{model.icon}</span>
-                    <span className="font-medium">{model.label}</span>
-                  </div>
-                  {isLocked ? (
-                    <span className="flex items-center gap-1 text-[10px] text-blue-400 font-medium">
-                      <LockIcon className="size-3" />
-                      Upgrade
-                    </span>
-                  ) : isSelected ? (
-                    <span className="text-[10px] text-muted-foreground">Active</span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
+          return (
+            <DropdownMenuItem
+              key={model.id}
+              onSelect={() => {
+                if (isLocked) {
+                  router.push("/pricing");
+                } else {
+                  onChange(model.id);
+                }
+              }}
+              className={cn(
+                "flex items-center justify-between px-3 py-2.5 cursor-pointer",
+                isSelected && "bg-accent",
+                isLocked && "cursor-pointer"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <span>{model.icon}</span>
+                <span className="font-medium text-sm">{model.label}</span>
+              </div>
+              {isLocked ? (
+                <span className="flex items-center gap-1 text-[10px] text-blue-400 font-medium">
+                  <LockIcon className="size-3" />
+                  Upgrade
+                </span>
+              ) : isSelected ? (
+                <span className="text-[10px] text-muted-foreground">Active</span>
+              ) : null}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
