@@ -12,6 +12,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // NEW: Add direct URL for Neon db
 }
 
 model Project {
@@ -80,4 +81,15 @@ model Subscription {
   lsSubscriptionId   String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+}
+
+model FigmaImport {
+  id         String   @id @default(uuid())
+  importId   String   @unique
+  userId     String
+  fileName   String
+  designData String   @db.Text
+  imageUrls  String   @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
