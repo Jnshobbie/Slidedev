@@ -48,6 +48,8 @@ export const messagesRouter = createTRPCRouter({
         projectType: z.enum(["web", "mobile"]).optional(), // NEW: Optional projectType (form selector)
         attachments: z.array(fileAttachmentSchema).optional(),
         model: z.string().optional(), // NEW: Optional model field for message-level model selection
+        importId: z.string().optional(),
+        mode: z.string().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -88,6 +90,20 @@ export const messagesRouter = createTRPCRouter({
       // Call GPT-5.2 directly (bypassing Inngest)
       console.log('🚀 Calling GPT-5.2 directly from messages (bypassing Inngest)');
 
+      let smartDesignData = undefined;
+      if (input.importId && input.mode === 'smart') {
+        const figmaImport = await prisma.figmaImport.findUnique({
+          where: { importId: input.importId }
+        });
+        if (figmaImport) {
+          smartDesignData = {
+            fileName: figmaImport.fileName,
+            nodes: JSON.parse(figmaImport.designData),
+            imageUrls: JSON.parse(figmaImport.imageUrls),
+          };
+        }
+      }
+
       // Call the runner directly (fire and forget - don't await to return immediately)
       // This avoids HTTP fetch issues and runs in the same process
       await generateCode.trigger({
@@ -95,6 +111,7 @@ export const messagesRouter = createTRPCRouter({
         model: existingProject.model,
         value: input.value,
         attachments: input.attachments,
+        smartDesignData, // Pass the smart design data if available
       });
 
       console.log('✅ GPT-5.2 job initiated from messages');

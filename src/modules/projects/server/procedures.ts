@@ -57,6 +57,8 @@ export const projectsRouter = createTRPCRouter({
         attachments: z.array(fileAttachmentSchema).optional(),
         figmaData: z.custom<FigmaImportResult>().optional(),
         model: z.string().optional(),
+        importId: z.string().optional(),
+        mode: z.string().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -96,12 +98,27 @@ export const projectsRouter = createTRPCRouter({
       // Call GPT-5.2 directly (bypassing Inngest)
       console.log('🚀 Calling GPT-5.2 directly from projects (bypassing Inngest)');
 
+      let smartDesignData = undefined;
+      if (input.importId && input.mode === 'smart') {
+        const figmaImport = await prisma.figmaImport.findUnique({
+          where: { importId: input.importId }
+        });
+        if (figmaImport) {
+          smartDesignData = {
+            fileName: figmaImport.fileName,
+            nodes: JSON.parse(figmaImport.designData),
+            imageUrls: JSON.parse(figmaImport.imageUrls),
+          };
+        }
+      }
+
       await generateCode.trigger({
         projectId: createdProject.id,
         model: createdProject.model,
         value: input.value,
         attachments: input.attachments,
         figmaData: input.figmaData,
+        smartDesignData, // Pass the smart design data if available
       });
 
       console.log('✅ GPT-5.2 job initiated from projects');

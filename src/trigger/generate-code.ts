@@ -16,6 +16,7 @@ interface GenerateCodePayload {
   model?: string;
   attachments?: Array<{ url: string; type: string; name: string; size: number }>;
   figmaData?: FigmaImportResult;
+  smartDesignData?: { fileName: string; nodes: object[]; imageUrls: Record<string, string> };
 }
 
 export const generateCode = task({
@@ -28,7 +29,7 @@ export const generateCode = task({
     maxTimeoutInMs: 10000,
   },
   run: async (payload: GenerateCodePayload) => {
-    const { projectId, value, attachments, figmaData } = payload;
+    const { projectId, value, attachments, figmaData, smartDesignData } = payload;
 
     console.log('🎯 Trigger.dev: Starting code generation');
     console.log('📦 Payload:', { projectId, hasAttachments: !!attachments, hasFigmaData: !!figmaData });
@@ -161,6 +162,35 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
       });
     }
 
+    // Smart Export context
+    if (smartDesignData) {
+      const smartContext = `
+SMART EXPORT - EXACT FIGMA DESIGN DATA:
+File: ${smartDesignData.fileName}
+
+You have been given the EXACT design data extracted directly from Figma. 
+Use this data to produce pixel-perfect code. Do NOT approximate or guess any values.
+
+Design Node Tree:
+${JSON.stringify(smartDesignData.nodes, null, 2)}
+
+Real Image URLs (use these directly in your code, do not use placeholders):
+${JSON.stringify(smartDesignData.imageUrls, null, 2)}
+
+Instructions:
+- Use exact colors from fills (rgba values)
+- Use exact font sizes, weights, and families from text nodes
+- Use exact padding, gap, and layout from layoutMode properties
+- Reference image URLs directly in img src or CSS background-image
+- Recreate the layout structure exactly as the node tree describes
+  `.trim();
+
+      formattedMessages.unshift({
+        role: "user",
+        content: smartContext,
+      });
+    }
+
     const systemPrompt = getPromptForProjectType(projectType) + "\n\n" + GPT52_CODE_AGENT_PROMPT;
     const currentFiles: Record<string, string> = {};
 
@@ -280,295 +310,295 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
     console.log('🤖 Starting GPT-5.2 direct loop');
 
     if (selectedModel === "claude-opus-4-6") {
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  // Format messages for Claude
-  const claudeMessages: Anthropic.MessageParam[] = formattedMessages.map(msg => ({
-    role: msg.role === "ASSISTANT" ? "assistant" : "user",
-    content: Array.isArray(msg.content)
-      ? msg.content.map((part: { type: string; text?: string; image_url?: { url: string } }) => {
-          if (part.type === "text") return { type: "text" as const, text: part.text ?? "" };
-          if (part.type === "image_url") return {
-            type: "image" as const,
-            source: { type: "url" as const, url: part.image_url?.url ?? "" },
-          };
-          return { type: "text" as const, text: "" };
-        })
-      : msg.content as string,
-  }));
+      // Format messages for Claude
+      const claudeMessages: Anthropic.MessageParam[] = formattedMessages.map(msg => ({
+        role: msg.role === "ASSISTANT" ? "assistant" : "user",
+        content: Array.isArray(msg.content)
+          ? msg.content.map((part: { type: string; text?: string; image_url?: { url: string } }) => {
+            if (part.type === "text") return { type: "text" as const, text: part.text ?? "" };
+            if (part.type === "image_url") return {
+              type: "image" as const,
+              source: { type: "url" as const, url: part.image_url?.url ?? "" },
+            };
+            return { type: "text" as const, text: "" };
+          })
+          : msg.content as string,
+      }));
 
-  // Claude tool definitions
-  const claudeTools: Anthropic.Tool[] = isMobile ? [
-    {
-      name: "createOrUpdateFiles",
-      description: "Create or update React Native files",
-      input_schema: {
-        type: "object" as const,
-        properties: {
-          files: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                path: { type: "string" },
-                content: { type: "string" },
+      // Claude tool definitions
+      const claudeTools: Anthropic.Tool[] = isMobile ? [
+        {
+          name: "createOrUpdateFiles",
+          description: "Create or update React Native files",
+          input_schema: {
+            type: "object" as const,
+            properties: {
+              files: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    path: { type: "string" },
+                    content: { type: "string" },
+                  },
+                  required: ["path", "content"],
+                },
               },
-              required: ["path", "content"],
             },
+            required: ["files"],
           },
         },
-        required: ["files"],
-      },
-    },
-  ] : [
-    {
-      name: "terminal",
-      description: "Run terminal commands",
-      input_schema: {
-        type: "object" as const,
-        properties: { command: { type: "string" } },
-        required: ["command"],
-      },
-    },
-    {
-      name: "createOrUpdateFiles",
-      description: "Create or update files in Next.js sandbox",
-      input_schema: {
-        type: "object" as const,
-        properties: {
-          files: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                path: { type: "string" },
-                content: { type: "string" },
-              },
-              required: ["path", "content"],
-            },
+      ] : [
+        {
+          name: "terminal",
+          description: "Run terminal commands",
+          input_schema: {
+            type: "object" as const,
+            properties: { command: { type: "string" } },
+            required: ["command"],
           },
         },
-        required: ["files"],
-      },
-    },
-    {
-      name: "readFiles",
-      description: "Read files from sandbox",
-      input_schema: {
-        type: "object" as const,
-        properties: {
-          files: { type: "array", items: { type: "string" } },
+        {
+          name: "createOrUpdateFiles",
+          description: "Create or update files in Next.js sandbox",
+          input_schema: {
+            type: "object" as const,
+            properties: {
+              files: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    path: { type: "string" },
+                    content: { type: "string" },
+                  },
+                  required: ["path", "content"],
+                },
+              },
+            },
+            required: ["files"],
+          },
         },
-        required: ["files"],
-      },
-    },
-  ];
+        {
+          name: "readFiles",
+          description: "Read files from sandbox",
+          input_schema: {
+            type: "object" as const,
+            properties: {
+              files: { type: "array", items: { type: "string" } },
+            },
+            required: ["files"],
+          },
+        },
+      ];
 
-  let claudeIterations = 0;
+      let claudeIterations = 0;
 
-  while (claudeIterations < maxIterations) {
-    claudeIterations++;
-    console.log(`🔄 Claude iteration ${claudeIterations}/${maxIterations}`);
+      while (claudeIterations < maxIterations) {
+        claudeIterations++;
+        console.log(`🔄 Claude iteration ${claudeIterations}/${maxIterations}`);
 
-    const response = await anthropic.messages.create({
-      model: "claude-opus-4-6",
-      max_tokens: 8096,
-      system: systemPrompt,
-      tools: claudeTools,
-      messages: claudeMessages,
-    });
-
-    console.log("✅ Claude API call successful");
-
-    // Build assistant message from response
-    const assistantContent: Anthropic.ContentBlock[] = [];
-
-    for (const block of response.content) {
-      if (block.type === "text") {
-        assistantContent.push(block);
-        if (block.text.includes("<task_summary>")) {
-          console.log("✅ Claude task complete");
-          finalSummary = block.text;
-        }
-      } else if (block.type === "tool_use") {
-        assistantContent.push(block);
-      }
-    }
-
-    claudeMessages.push({ role: "assistant", content: assistantContent });
-
-    if (finalSummary) break;
-
-    if (response.stop_reason === "tool_use") {
-      const toolResults: Anthropic.ToolResultBlockParam[] = [];
-
-      for (const block of response.content) {
-        if (block.type !== "tool_use") continue;
-
-        const { name, input, id } = block;
-        let toolResult = "";
-
-        console.log(`→ ${name}`);
-
-        if (name === "createOrUpdateFiles") {
-          const { files } = input as { files: { path: string; content: string }[] };
-          if (!isMobile && sandboxId) {
-            const sandbox = await Sandbox.connect(sandboxId);
-            await sandbox.setTimeout(SANDBOX_TIMEOUT);
-            for (const file of files) {
-              await sandbox.files.write(file.path, file.content);
-              currentFiles[file.path] = file.content;
-            }
-          } else {
-            for (const file of files) {
-              currentFiles[file.path] = file.content;
-            }
-          }
-          toolResult = "Files created successfully";
-
-        } else if (name === "terminal" && sandboxId) {
-          const { command } = input as { command: string };
-          const sandbox = await Sandbox.connect(sandboxId);
-          await sandbox.setTimeout(SANDBOX_TIMEOUT);
-          const result = await sandbox.commands.run(command);
-          toolResult = result.stdout;
-
-        } else if (name === "readFiles" && sandboxId) {
-          const { files } = input as { files: string[] };
-          const sandbox = await Sandbox.connect(sandboxId);
-          await sandbox.setTimeout(SANDBOX_TIMEOUT);
-          const contents = [];
-          for (const filePath of files) {
-            const content = await sandbox.files.read(filePath);
-            contents.push({ path: filePath, content });
-          }
-          toolResult = JSON.stringify(contents);
-        }
-
-        toolResults.push({
-          type: "tool_result",
-          tool_use_id: id,
-          content: toolResult || "Tool execution completed",
+        const response = await anthropic.messages.create({
+          model: "claude-opus-4-6",
+          max_tokens: 8096,
+          system: systemPrompt,
+          tools: claudeTools,
+          messages: claudeMessages,
         });
-      }
 
-      claudeMessages.push({ role: "user", content: toolResults });
+        console.log("✅ Claude API call successful");
 
-    } else if (response.stop_reason === "end_turn" && !finalSummary) {
-      console.log("⚠️ Claude stopped without task_summary, prompting to continue");
-      claudeMessages.push({
-        role: "user",
-        content: "Continue with the task. Use the available tools and finish with a <task_summary>.",
-      });
-    }
-  }
+        // Build assistant message from response
+        const assistantContent: Anthropic.ContentBlock[] = [];
 
-  console.log(`✅ Claude completed in ${claudeIterations} iterations`);
+        for (const block of response.content) {
+          if (block.type === "text") {
+            assistantContent.push(block);
+            if (block.text.includes("<task_summary>")) {
+              console.log("✅ Claude task complete");
+              finalSummary = block.text;
+            }
+          } else if (block.type === "tool_use") {
+            assistantContent.push(block);
+          }
+        }
 
-} else {
+        claudeMessages.push({ role: "assistant", content: assistantContent });
 
-    while (iterations < maxIterations) {
-      iterations++;
-      console.log(`🔄 Iteration ${iterations}/${maxIterations}`);
+        if (finalSummary) break;
 
-      // DIRECT GPT-5.2 CALL (no helper function)
-      console.log('📡 Calling GPT-5.2 API directly...');
-      const response = await openai.chat.completions.create({
-        model: selectedModel,
-        messages,
-        tools,
-        tool_choice: 'auto',
-        temperature: 0.1,
-      });
+        if (response.stop_reason === "tool_use") {
+          const toolResults: Anthropic.ToolResultBlockParam[] = [];
 
-      console.log('✅ GPT-5.2 API call successful');
+          for (const block of response.content) {
+            if (block.type !== "tool_use") continue;
 
-      const choice = response.choices[0];
-      const message = choice.message;
+            const { name, input, id } = block;
+            let toolResult = "";
 
-      // Push assistant message
-      messages.push({
-        role: 'assistant',
-        content: message.content,
-        tool_calls: message.tool_calls
-      } as ChatCompletionMessageParam);
+            console.log(`→ ${name}`);
 
-      // Check for completion
-      if (message.content && typeof message.content === 'string' && message.content.includes('<task_summary>')) {
-        console.log('✅ Task complete');
-        finalSummary = message.content;
-        break;
-      }
+            if (name === "createOrUpdateFiles") {
+              const { files } = input as { files: { path: string; content: string }[] };
+              if (!isMobile && sandboxId) {
+                const sandbox = await Sandbox.connect(sandboxId);
+                await sandbox.setTimeout(SANDBOX_TIMEOUT);
+                for (const file of files) {
+                  await sandbox.files.write(file.path, file.content);
+                  currentFiles[file.path] = file.content;
+                }
+              } else {
+                for (const file of files) {
+                  currentFiles[file.path] = file.content;
+                }
+              }
+              toolResult = "Files created successfully";
 
-      // Handle tool calls
-      if (message.tool_calls && message.tool_calls.length > 0) {
-        console.log(`🔧 Processing ${message.tool_calls.length} tool calls`);
-
-        for (const toolCall of message.tool_calls) {
-          if (toolCall.type !== 'function') continue;
-
-          const functionName = toolCall.function.name;
-          const functionArgs = JSON.parse(toolCall.function.arguments);
-
-          console.log(`→ ${functionName}`);
-
-          let toolResult = '';
-
-          // Execute tools directly (no callback)
-          if (functionName === 'createOrUpdateFiles' && functionArgs.files) {
-            if (!isMobile && sandboxId) {
+            } else if (name === "terminal" && sandboxId) {
+              const { command } = input as { command: string };
               const sandbox = await Sandbox.connect(sandboxId);
               await sandbox.setTimeout(SANDBOX_TIMEOUT);
-              for (const file of functionArgs.files) {
-                await sandbox.files.write(file.path, file.content);
-                currentFiles[file.path] = file.content;
+              const result = await sandbox.commands.run(command);
+              toolResult = result.stdout;
+
+            } else if (name === "readFiles" && sandboxId) {
+              const { files } = input as { files: string[] };
+              const sandbox = await Sandbox.connect(sandboxId);
+              await sandbox.setTimeout(SANDBOX_TIMEOUT);
+              const contents = [];
+              for (const filePath of files) {
+                const content = await sandbox.files.read(filePath);
+                contents.push({ path: filePath, content });
               }
-            } else {
-              for (const file of functionArgs.files) {
-                currentFiles[file.path] = file.content;
-              }
+              toolResult = JSON.stringify(contents);
             }
-            toolResult = 'Files created successfully';
-          } else if (functionName === 'terminal' && sandboxId && functionArgs.command) {
-            const sandbox = await Sandbox.connect(sandboxId);
-            await sandbox.setTimeout(SANDBOX_TIMEOUT);
-            const result = await sandbox.commands.run(functionArgs.command);
-            toolResult = result.stdout;
-          } else if (functionName === 'readFiles' && sandboxId && functionArgs.files) {
-            const sandbox = await Sandbox.connect(sandboxId);
-            await sandbox.setTimeout(SANDBOX_TIMEOUT);
-            const contents = [];
-            for (const filePath of functionArgs.files) {
-              const content = await sandbox.files.read(filePath);
-              contents.push({ path: filePath, content });
-            }
-            toolResult = JSON.stringify(contents);
+
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: id,
+              content: toolResult || "Tool execution completed",
+            });
           }
 
-          // Push tool result
-          messages.push({
-            role: 'tool',
-            content: toolResult || 'Tool execution completed',
-            tool_call_id: toolCall.id
-          } as ChatCompletionMessageParam);
+          claudeMessages.push({ role: "user", content: toolResults });
+
+        } else if (response.stop_reason === "end_turn" && !finalSummary) {
+          console.log("⚠️ Claude stopped without task_summary, prompting to continue");
+          claudeMessages.push({
+            role: "user",
+            content: "Continue with the task. Use the available tools and finish with a <task_summary>.",
+          });
         }
-      } else {
-        console.log('⚠️ No tool calls, prompting to continue');
-        messages.push({
-          role: 'user',
-          content: 'Continue with the task. Use the available tools.'
+      }
+
+      console.log(`✅ Claude completed in ${claudeIterations} iterations`);
+
+    } else {
+
+      while (iterations < maxIterations) {
+        iterations++;
+        console.log(`🔄 Iteration ${iterations}/${maxIterations}`);
+
+        // DIRECT GPT-5.2 CALL (no helper function)
+        console.log('📡 Calling GPT-5.2 API directly...');
+        const response = await openai.chat.completions.create({
+          model: selectedModel,
+          messages,
+          tools,
+          tool_choice: 'auto',
+          temperature: 0.1,
         });
+
+        console.log('✅ GPT-5.2 API call successful');
+
+        const choice = response.choices[0];
+        const message = choice.message;
+
+        // Push assistant message
+        messages.push({
+          role: 'assistant',
+          content: message.content,
+          tool_calls: message.tool_calls
+        } as ChatCompletionMessageParam);
+
+        // Check for completion
+        if (message.content && typeof message.content === 'string' && message.content.includes('<task_summary>')) {
+          console.log('✅ Task complete');
+          finalSummary = message.content;
+          break;
+        }
+
+        // Handle tool calls
+        if (message.tool_calls && message.tool_calls.length > 0) {
+          console.log(`🔧 Processing ${message.tool_calls.length} tool calls`);
+
+          for (const toolCall of message.tool_calls) {
+            if (toolCall.type !== 'function') continue;
+
+            const functionName = toolCall.function.name;
+            const functionArgs = JSON.parse(toolCall.function.arguments);
+
+            console.log(`→ ${functionName}`);
+
+            let toolResult = '';
+
+            // Execute tools directly (no callback)
+            if (functionName === 'createOrUpdateFiles' && functionArgs.files) {
+              if (!isMobile && sandboxId) {
+                const sandbox = await Sandbox.connect(sandboxId);
+                await sandbox.setTimeout(SANDBOX_TIMEOUT);
+                for (const file of functionArgs.files) {
+                  await sandbox.files.write(file.path, file.content);
+                  currentFiles[file.path] = file.content;
+                }
+              } else {
+                for (const file of functionArgs.files) {
+                  currentFiles[file.path] = file.content;
+                }
+              }
+              toolResult = 'Files created successfully';
+            } else if (functionName === 'terminal' && sandboxId && functionArgs.command) {
+              const sandbox = await Sandbox.connect(sandboxId);
+              await sandbox.setTimeout(SANDBOX_TIMEOUT);
+              const result = await sandbox.commands.run(functionArgs.command);
+              toolResult = result.stdout;
+            } else if (functionName === 'readFiles' && sandboxId && functionArgs.files) {
+              const sandbox = await Sandbox.connect(sandboxId);
+              await sandbox.setTimeout(SANDBOX_TIMEOUT);
+              const contents = [];
+              for (const filePath of functionArgs.files) {
+                const content = await sandbox.files.read(filePath);
+                contents.push({ path: filePath, content });
+              }
+              toolResult = JSON.stringify(contents);
+            }
+
+            // Push tool result
+            messages.push({
+              role: 'tool',
+              content: toolResult || 'Tool execution completed',
+              tool_call_id: toolCall.id
+            } as ChatCompletionMessageParam);
+          }
+        } else {
+          console.log('⚠️ No tool calls, prompting to continue');
+          messages.push({
+            role: 'user',
+            content: 'Continue with the task. Use the available tools.'
+          });
+        }
+
+        if (choice.finish_reason === 'stop' && !message.tool_calls) {
+          console.log('⚠️ Agent stopped without completing');
+          break;
+        }
       }
 
-      if (choice.finish_reason === 'stop' && !message.tool_calls) {
-        console.log('⚠️ Agent stopped without completing');
-        break;
-      }
+      console.log(`✅ GPT-5.2 completed in ${iterations} iterations`);
+      console.log(`📝 Files created: ${Object.keys(currentFiles).length}`);
     }
-
-    console.log(`✅ GPT-5.2 completed in ${iterations} iterations`);
-    console.log(`📝 Files created: ${Object.keys(currentFiles).length}`);
-  }
 
     // 8. Generate title and response with GPT-4o
     const [titleResp, responseResp] = await Promise.all([
