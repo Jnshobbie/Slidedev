@@ -1,22 +1,15 @@
 import { NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
 import { nanoid } from "nanoid";
 
 export async function POST(req: Request) {
   try {
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await req.json();
     const { fileName, nodes, images, importId: existingImportId, batchIndex, totalBatches } = body;
 
     const importId = existingImportId || nanoid();
 
-    // Upload images to Cloudinary and get back real URLs
     const imageUrlMap: Record<string, string> = {};
     if (images && Object.keys(images).length > 0) {
       for (const [nodeId, base64] of Object.entries(images)) {
@@ -33,7 +26,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // On last batch, store the full design data and create project
     if (batchIndex === totalBatches - 1) {
       await prisma.figmaImport.upsert({
         where: { importId },
@@ -44,7 +36,7 @@ export async function POST(req: Request) {
         },
         create: {
           importId,
-          userId: user.id,
+          userId: "anonymous",
           fileName,
           designData: JSON.stringify({ fileName, nodes }),
           imageUrls: JSON.stringify(imageUrlMap),
@@ -52,7 +44,11 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ importId, imageUrlMap });
+    return NextResponse.json({ importId, imageUrlMap }, {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+      }
+    });
   } catch (error) {
     console.error("Smart import error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

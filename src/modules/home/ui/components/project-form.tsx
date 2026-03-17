@@ -51,6 +51,8 @@ export const ProjectForm = () => {
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const [projectType, setProjectType] = useState<ProjectType>("web");
   const [model, setModel] = useState("gpt-5.2");
+  const [smartImportId, setSmartImportId] = useState<string | null>(null);
+  const [smartMode, setSmartMode] = useState(false);
 
   useEffect(() => {
     console.log(" Current attachments state:", attachments);
@@ -76,6 +78,15 @@ export const ProjectForm = () => {
         }
 
         console.log(' Checking for plugin export with importId:', importId);
+
+        const mode = urlParams.get('mode');
+        if (mode === 'smart') {
+          setSmartImportId(importId);
+          setSmartMode(true);
+          toast.success('Smart Export loaded! Describe what to build.');
+          window.history.replaceState({}, '', '/');
+          return; // Don't fetch PNG frames for smart mode
+        }
 
         const res = await fetch(`/api/figma/plugin-import?importId=${importId}`, {
           method: 'GET',
@@ -243,6 +254,8 @@ export const ProjectForm = () => {
       projectType,
       attachments: attachments.length > 0 ? attachments : undefined,
       model, // 
+      importId: smartImportId || undefined,
+      mode: smartMode ? 'smart' : undefined,
     });
   };
 
@@ -350,7 +363,7 @@ export const ProjectForm = () => {
                 onBlur={() => setIsFocused(false)}
                 minRows={2}
                 maxRows={8}
-                placeholder="What would you like to build?"
+                placeholder={smartMode ? "✦ Smart Export loaded — describe what to build with your figma design..." : "What would you like to build?"}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                     e.preventDefault();
@@ -383,9 +396,9 @@ export const ProjectForm = () => {
                 disabled={isPending}
               />
 
-              
+
               <ModelSelector value={model} onChange={setModel} disabled={isPending} isPro={isPro} />
-              
+
 
               {/* File Upload Dropdown */}
               <DropdownMenu>
