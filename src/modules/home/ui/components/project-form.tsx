@@ -53,6 +53,7 @@ export const ProjectForm = () => {
   const [model, setModel] = useState("gpt-5.2");
   const [smartImportId, setSmartImportId] = useState<string | null>(null);
   const [smartMode, setSmartMode] = useState(false);
+  const [smartFileName, setSmartFileName] = useState<string | null>(null);
 
   useEffect(() => {
     console.log(" Current attachments state:", attachments);
@@ -81,11 +82,15 @@ export const ProjectForm = () => {
 
         const mode = urlParams.get('mode');
         if (mode === 'smart') {
+          const fileName = urlParams.get('fileName') || 'Figma Design';
           setSmartImportId(importId);
           setSmartMode(true);
-          toast.success('Smart Export loaded! Describe what to build.');
+          setSmartFileName(fileName);
+          // Persist to localStorage in case of login redirect
+          localStorage.setItem('slidedev_smart_importId', importId);
+          localStorage.setItem('slidedev_smart_fileName', fileName);
           window.history.replaceState({}, '', '/');
-          return; // Don't fetch PNG frames for smart mode
+          return;
         }
 
         const res = await fetch(`/api/figma/plugin-import?importId=${importId}`, {
@@ -127,6 +132,20 @@ export const ProjectForm = () => {
     const handleFocus = () => {
       checkForPluginExport();
     };
+
+    // Fallback: check localStorage if URL had no params (e.g. after login redirect)
+    const urlParams2 = new URLSearchParams(window.location.search);
+const hasUrlImport = urlParams2.get('importId');
+if (!hasUrlImport) {
+  const savedImportId = localStorage.getItem('slidedev_smart_importId');
+  const savedFileName = localStorage.getItem('slidedev_smart_fileName');
+  if (savedImportId) {
+    setSmartImportId(savedImportId);
+    setSmartMode(true);
+    setSmartFileName(savedFileName);
+  }
+}
+
     window.addEventListener('focus', handleFocus);
 
     return () => {
@@ -237,6 +256,8 @@ export const ProjectForm = () => {
 
   const createProject = useMutation(trpc.projects.create.mutationOptions({
     onSuccess: (data) => {
+      localStorage.removeItem('slidedev_smart_importId');
+      localStorage.removeItem('slidedev_smart_fileName');
       queryClient.invalidateQueries(trpc.projects.getMany.queryOptions());
       queryClient.invalidateQueries(trpc.usage.status.queryOptions());
       router.push(`/projects/${data.id}`);
@@ -282,6 +303,31 @@ export const ProjectForm = () => {
           className="relative w-full transition-all"
         >
           {/* File Attachments Preview */}
+
+          {smartMode && smartFileName && (
+            <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-lg"
+              style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)" }}>
+              <span style={{ color: "#a5b4fc", fontSize: "12px" }}>✦</span>
+              <span style={{ color: "#a5b4fc", fontSize: "12px", fontWeight: 500 }}>
+                Smart Export loaded: {smartFileName}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSmartMode(false);
+                  setSmartImportId(null);
+                  setSmartFileName(null);
+                  localStorage.removeItem('slidedev_smart_importId');
+                  localStorage.removeItem('slidedev_smart_fileName');
+                }}
+                style={{ marginLeft: "auto", color: "#a5b4fc", opacity: 0.6 }}
+                className="hover:opacity-100 transition-opacity"
+              >
+                <XIcon className="size-3" />
+              </button>
+            </div>
+          )}
+
           {attachments.length > 0 && (
             <div className="mb-3 flex gap-2 flex-wrap" data-testid="attachments-preview">
               {process.env.NODE_ENV === 'development' && (
