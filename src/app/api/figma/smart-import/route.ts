@@ -1,54 +1,88 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { uploadImageToCloudinary } from "@/lib/cloudinary";
 import { nanoid } from "nanoid";
+import { cookies } from "next/headers";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { fileName, nodes, images, importId: existingImportId, batchIndex, totalBatches } = body;
+    const { fileKey, nodeIds, fileName } = body;
 
-    const importId = existingImportId || nanoid();
+    if (!fileKey || !nodeIds || nodeIds.length === 0) {
+      return NextResponse.json({ error: "Missing fileKey or nodeIds" }, { status: 400 });
+    }
 
-    const imageUrlMap: Record<string, string> = {};
-    if (images && Object.keys(images).length > 0) {
-      for (const [nodeId, base64] of Object.entries(images)) {
-        try {
-          const url = await uploadImageToCloudinary(
-            base64 as string,
-            importId,
-            `image-${nodeId}`
-          );
-          imageUrlMap[nodeId] = url;
-        } catch (err) {
-          console.error(`Failed to upload image for node ${nodeId}:`, err);
+    // Get Figma token from cookie
+    const cookieStore = await cookies();
+    const figmaToken = cookieStore.get('figma_token')?.value;
+
+    if (!figmaToken) {
+      return NextResponse.json({ 
+        error: "Figma not connected. Please connect your Figma account first." 
+      }, { status: 401 });
+    }
+
+    // Call Figma API server-side — instant, no timeout
+    const nodeIdsParam = nodeIds.join(',');
+    console.log(`🎨 Fetching Figma nodes: ${nodeIdsParam}`);
+
+    const figmaRes = await fetch(
+      `https://api.figma.com/v1/files/${fileKey}/nodes?ids=${encodeURIComponent(nodeIdsParam)}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${figmaToken}`,
+          'Content-Type': 'application/json',
         }
       }
+    );
+
+    if (!figmaRes.ok) {
+      const err = await figmaRes.text();
+      console.error('Figma API error:', err);
+      return NextResponse.json({ 
+        error: "Failed to fetch from Figma API. Token may be expired." 
+      }, { status: 400 });
     }
 
-    if (batchIndex === totalBatches - 1) {
-      await prisma.figmaImport.upsert({
-        where: { importId },
-        update: {
-          designData: JSON.stringify({ fileName, nodes }),
-          imageUrls: JSON.stringify(imageUrlMap),
-          updatedAt: new Date(),
-        },
-        create: {
-          importId,
-          userId: "anonymous",
-          fileName,
-          designData: JSON.stringify({ fileName, nodes }),
-          imageUrls: JSON.stringify(imageUrlMap),
-        },
-      });
+    const figmaData = await figmaRes.json();
+    console.log(`✅ Figma API returned ${Object.keys(figmaData.nodes || {}).length} nodes`);
+
+    // Also fetch images for the nodes
+    const imageUrlMap: Record<string, string> = {};
+    try {
+      const imagesRes = await fetch(
+        `https://api.figma.com/v1/images/${fileKey}?ids=${encodeURIComponent(nodeIdsParam)}&format=png&scale=2`,
+        {
+          headers: { 'Authorization': `Bearer ${figmaToken}` }
+        }
+      );
+      if (imagesRes.ok) {
+        const imagesData = await imagesRes.json();
+        Object.assign(imageUrlMap, imagesData.images || {});
+        console.log(`✅ Got ${Object.keys(imageUrlMap).length} image URLs from Figma`);
+      }
+    } catch (err) {
+      console.error('Failed to fetch images:', err);
     }
 
-    return NextResponse.json({ importId, imageUrlMap }, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
+    // Store in DB
+    const importId = nanoid();
+    await prisma.figmaImport.create({
+      data: {
+        importId,
+        userId: "anonymous",
+        fileName: fileName || figmaData.name || 'Figma Design',
+        designData: JSON.stringify(figmaData.nodes),
+        imageUrls: JSON.stringify(imageUrlMap),
       }
     });
+
+    console.log(`✅ Smart import saved: ${importId}`);
+
+    return NextResponse.json({ importId, imageUrlMap }, {
+      headers: { "Access-Control-Allow-Origin": "*" }
+    });
+
   } catch (error) {
     console.error("Smart import error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
