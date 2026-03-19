@@ -4,25 +4,28 @@ import { nanoid } from "nanoid";
 import { cookies } from "next/headers";
 
 export async function POST(req: Request) {
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "https://www.figma.com",
+    "Access-Control-Allow-Credentials": "true",
+  };
+
   try {
     const body = await req.json();
     const { fileKey, nodeIds, fileName } = body;
 
     if (!fileKey || !nodeIds || nodeIds.length === 0) {
-      return NextResponse.json({ error: "Missing fileKey or nodeIds" }, { status: 400 });
+      return NextResponse.json({ error: "Missing fileKey or nodeIds" }, { status: 400, headers: corsHeaders });
     }
 
-    // Get Figma token from cookie
     const cookieStore = await cookies();
     const figmaToken = cookieStore.get('figma_token')?.value;
 
     if (!figmaToken) {
       return NextResponse.json({ 
         error: "Figma not connected. Please connect your Figma account first." 
-      }, { status: 401 });
+      }, { status: 401, headers: corsHeaders });
     }
 
-    // Call Figma API server-side — instant, no timeout
     const nodeIdsParam = nodeIds.join(',');
     console.log(`🎨 Fetching Figma nodes: ${nodeIdsParam}`);
 
@@ -41,13 +44,12 @@ export async function POST(req: Request) {
       console.error('Figma API error:', err);
       return NextResponse.json({ 
         error: "Failed to fetch from Figma API. Token may be expired." 
-      }, { status: 400 });
+      }, { status: 400, headers: corsHeaders });
     }
 
     const figmaData = await figmaRes.json();
     console.log(`✅ Figma API returned ${Object.keys(figmaData.nodes || {}).length} nodes`);
 
-    // Also fetch images for the nodes
     const imageUrlMap: Record<string, string> = {};
     try {
       const imagesRes = await fetch(
@@ -65,7 +67,6 @@ export async function POST(req: Request) {
       console.error('Failed to fetch images:', err);
     }
 
-    // Store in DB
     const importId = nanoid();
     await prisma.figmaImport.create({
       data: {
@@ -79,13 +80,11 @@ export async function POST(req: Request) {
 
     console.log(`✅ Smart import saved: ${importId}`);
 
-    return NextResponse.json({ importId, imageUrlMap }, {
-      headers: { "Access-Control-Allow-Origin": "*" }
-    });
+    return NextResponse.json({ importId, imageUrlMap }, { headers: corsHeaders });
 
   } catch (error) {
     console.error("Smart import error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500, headers: corsHeaders });
   }
 }
 
