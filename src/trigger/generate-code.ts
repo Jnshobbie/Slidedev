@@ -16,7 +16,7 @@ interface GenerateCodePayload {
   model?: string;
   attachments?: Array<{ url: string; type: string; name: string; size: number }>;
   figmaData?: FigmaImportResult;
-  smartDesignData?: { fileName: string; nodes: object[]; imageUrls: Record<string, string> };
+  smartDesignData?: { fileName: string; nodes: Record<string, unknown> | object[]; imageUrls: Record<string, string> };
 }
 
 export const generateCode = task({
@@ -171,11 +171,11 @@ File: ${smartDesignData.fileName}
 You have been given the EXACT design data extracted directly from Figma. 
 Use this data to produce pixel-perfect code. Do NOT approximate or guess any values.
 
-Design Node Tree:
-${JSON.stringify(smartDesignData.nodes, null, 2)}
+Design Node Tree (truncated for efficiency):
+${JSON.stringify(smartDesignData.nodes).slice(0, 30000)}
 
 Real Image URLs (use these directly in your code, do not use placeholders):
-${JSON.stringify(smartDesignData.imageUrls, null, 2)}
+${JSON.stringify(smartDesignData.imageUrls, null, 2).slice(0, 5000)}
 
 Instructions:
 - Use exact colors from fills (rgba values)
