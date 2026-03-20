@@ -1,86 +1,41 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { nanoid } from "nanoid";
-import { cookies } from "next/headers";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
 
 export async function POST(req: Request) {
-  const corsHeaders = {
-    "Access-Control-Allow-Origin": "https://www.figma.com",
-    "Access-Control-Allow-Credentials": "true",
-  };
-
   try {
     const body = await req.json();
-    const { fileKey, nodeIds, fileName } = body;
+    const { fileName, nodes, images, importId: existingImportId, batchIndex, totalBatches } = body;
 
-    if (!fileKey || !nodeIds || nodeIds.length === 0) {
-      return NextResponse.json({ error: "Missing fileKey or nodeIds" }, { status: 400, headers: corsHeaders });
-    }
+    const importId = existingImportId || nanoid();
 
-    const cookieStore = await cookies();
-    const figmaToken = cookieStore.get('figma_token')?.value;
-
-    if (!figmaToken) {
-      return NextResponse.json({ 
-        error: "Figma not connected. Please connect your Figma account first." 
-      }, { status: 401, headers: corsHeaders });
-    }
-
-    const nodeIdsParam = nodeIds.join(',');
-    console.log(`🎨 Fetching Figma nodes: ${nodeIdsParam}`);
-
-    const figmaRes = await fetch(
-      `https://api.figma.com/v1/files/${fileKey}/nodes?ids=${encodeURIComponent(nodeIdsParam)}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${figmaToken}`,
-          'Content-Type': 'application/json',
-        }
-      }
-    );
-
-    if (!figmaRes.ok) {
-      const err = await figmaRes.text();
-      console.error('Figma API error:', err);
-      return NextResponse.json({ 
-        error: "Failed to fetch from Figma API. Token may be expired." 
-      }, { status: 400, headers: corsHeaders });
-    }
-
-    const figmaData = await figmaRes.json();
-    console.log(`✅ Figma API returned ${Object.keys(figmaData.nodes || {}).length} nodes`);
-
-    const imageUrlMap: Record<string, string> = {};
-    try {
-      const imagesRes = await fetch(
-        `https://api.figma.com/v1/images/${fileKey}?ids=${encodeURIComponent(nodeIdsParam)}&format=png&scale=2`,
-        {
-          headers: { 'Authorization': `Bearer ${figmaToken}` }
-        }
-      );
-      if (imagesRes.ok) {
-        const imagesData = await imagesRes.json();
-        Object.assign(imageUrlMap, imagesData.images || {});
-        console.log(`✅ Got ${Object.keys(imageUrlMap).length} image URLs from Figma`);
-      }
-    } catch (err) {
-      console.error('Failed to fetch images:', err);
-    }
-
-    const importId = nanoid();
-    await prisma.figmaImport.create({
-      data: {
+    await prisma.figmaImport.upsert({
+      where: { importId },
+      update: {
+        designData: JSON.stringify({ 
+          ...(await getExistingNodes(importId)), 
+          ...flattenNodes(nodes) 
+        }),
+        updatedAt: new Date(),
+      },
+      create: {
         importId,
         userId: "anonymous",
-        fileName: fileName || figmaData.name || 'Figma Design',
-        designData: JSON.stringify(figmaData.nodes),
-        imageUrls: JSON.stringify(imageUrlMap),
+        fileName: fileName || 'Figma Design',
+        designData: JSON.stringify(flattenNodes(nodes)),
+        imageUrls: JSON.stringify(images || {}),
       }
     });
 
-    console.log(`✅ Smart import saved: ${importId}`);
+    console.log(`✅ Smart import batch ${batchIndex + 1}/${totalBatches} saved: ${importId}`);
 
-    return NextResponse.json({ importId, imageUrlMap }, { headers: corsHeaders });
+    return NextResponse.json({ importId }, { headers: corsHeaders });
 
   } catch (error) {
     console.error("Smart import error:", error);
@@ -88,14 +43,27 @@ export async function POST(req: Request) {
   }
 }
 
+async function getExistingNodes(importId: string) {
+  try {
+    const existing = await prisma.figmaImport.findUnique({ where: { importId } });
+    return existing ? JSON.parse(existing.designData) : {};
+  } catch {
+    return {};
+  }
+}
+
+function flattenNodes(nodes: unknown[]) {
+  if (!nodes || !Array.isArray(nodes)) return {};
+  const result: Record<string, unknown> = {};
+  for (const node of nodes) {
+    const n = node as Record<string, unknown>;
+    if (n && n.id) {
+      result[n.id as string] = n;
+    }
+  }
+  return result;
+}
+
 export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      "Access-Control-Allow-Origin": "https://www.figma.com",
-      "Access-Control-Allow-Credentials": "true",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  });
+  return new NextResponse(null, { status: 200, headers: corsHeaders });
 }
