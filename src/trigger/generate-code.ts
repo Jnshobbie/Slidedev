@@ -163,33 +163,7 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
     }
 
     // Smart Export context
-    if (smartDesignData) {
-      const smartContext = `
-SMART EXPORT - EXACT FIGMA DESIGN DATA:
-File: ${smartDesignData.fileName}
 
-You have been given the EXACT design data extracted directly from Figma. 
-Use this data to produce pixel-perfect code. Do NOT approximate or guess any values.
-
-Design Node Tree (truncated for efficiency):
-${JSON.stringify(smartDesignData.nodes).slice(0, 30000)}
-
-Real Image URLs (use these directly in your code, do not use placeholders):
-${JSON.stringify(smartDesignData.imageUrls, null, 2).slice(0, 5000)}
-
-Instructions:
-- Use exact colors from fills (rgba values)
-- Use exact font sizes, weights, and families from text nodes
-- Use exact padding, gap, and layout from layoutMode properties
-- Reference image URLs directly in img src or CSS background-image
-- Recreate the layout structure exactly as the node tree describes
-  `.trim();
-
-      formattedMessages.unshift({
-        role: "user",
-        content: smartContext,
-      });
-    }
 
     const systemPrompt = getPromptForProjectType(projectType) + "\n\n" + GPT52_CODE_AGENT_PROMPT;
     const currentFiles: Record<string, string> = {};
@@ -309,10 +283,268 @@ Instructions:
 
     console.log('🤖 Starting GPT-5.2 direct loop');
 
+    // Define Claude tools upfront so smart export loop can use them
+    const claudeTools: Anthropic.Tool[] = isMobile ? [
+      {
+        name: "createOrUpdateFiles",
+        description: "Create or update React Native files",
+        input_schema: {
+          type: "object" as const,
+          properties: {
+            files: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  path: { type: "string" },
+                  content: { type: "string" },
+                },
+                required: ["path", "content"],
+              },
+            },
+          },
+          required: ["files"],
+        },
+      },
+    ] : [
+      {
+        name: "terminal",
+        description: "Run terminal commands",
+        input_schema: {
+          type: "object" as const,
+          properties: { command: { type: "string" } },
+          required: ["command"],
+        },
+      },
+      {
+        name: "createOrUpdateFiles",
+        description: "Create or update files in Next.js sandbox",
+        input_schema: {
+          type: "object" as const,
+          properties: {
+            files: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  path: { type: "string" },
+                  content: { type: "string" },
+                },
+                required: ["path", "content"],
+              },
+            },
+          },
+          required: ["files"],
+        },
+      },
+      {
+        name: "readFiles",
+        description: "Read files from sandbox",
+        input_schema: {
+          type: "object" as const,
+          properties: {
+            files: { type: "array", items: { type: "string" } },
+          },
+          required: ["files"],
+        },
+      },
+    ];
+
+
+    // Smart Export
+    if (smartDesignData) {
+      const nodes = smartDesignData.nodes as Record<string, unknown>;
+      const nodeEntries = Object.entries(nodes);
+
+      // Process each section with a separate AI call — same project, same sandbox
+      for (const [id, node] of nodeEntries) {
+        const n = node as Record<string, unknown>;
+        const sectionName = (n.name as string) || id;
+
+        console.log(`🎨 Building section: ${sectionName}`);
+
+        const sectionContext = `
+SMART EXPORT - SECTION: ${sectionName}
+File: ${smartDesignData.fileName}
+
+Build ONLY this section as a React component named ${sectionName.replace(/\s+/g, '')}Section.
+Use exact values from the node data — no approximations.
+
+Real Image URLs:
+${JSON.stringify(smartDesignData.imageUrls, null, 2)}
+
+Node Data for this section:
+${JSON.stringify(node, null, 2)}
+
+Instructions:
+- Create ONLY the ${sectionName} component
+- Use exact colors, fonts, spacing from node data
+- Use image URLs directly in img src
+- Export as default
+    `.trim();
+
+        // Add section context as first message for this iteration
+        const sectionMessages = [
+          ...formattedMessages,
+          { role: "user" as const, content: sectionContext }
+        ];
+
+        // Run AI for this section
+        const sectionSystemPrompt = getPromptForProjectType(projectType) + "\n\n" + GPT52_CODE_AGENT_PROMPT;
+
+        if (selectedModel === "claude-opus-4-6") {
+          // Claude section call
+          const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+          const claudeSectionMessages: Anthropic.MessageParam[] = sectionMessages.map(msg => ({
+            role: msg.role === "ASSISTANT" ? "assistant" : "user",
+            content: msg.content as string,
+          }));
+
+          let sectionDone = false;
+          let sectionIterations = 0;
+
+          while (!sectionDone && sectionIterations < 5) {
+            sectionIterations++;
+            const response = await anthropic.messages.create({
+              model: "claude-opus-4-6",
+              max_tokens: 8096,
+              system: sectionSystemPrompt,
+              tools: claudeTools,
+              messages: claudeSectionMessages,
+            });
+
+            const assistantContent: Anthropic.ContentBlock[] = [];
+            for (const block of response.content) {
+              if (block.type === "text") {
+                assistantContent.push(block);
+                if (block.text.includes("<task_summary>")) sectionDone = true;
+              } else if (block.type === "tool_use") {
+                assistantContent.push(block);
+              }
+            }
+            claudeSectionMessages.push({ role: "assistant", content: assistantContent });
+
+            if (response.stop_reason === "tool_use") {
+              const toolResults: Anthropic.ToolResultBlockParam[] = [];
+              for (const block of response.content) {
+                if (block.type !== "tool_use") continue;
+                const { name, input, id: toolId } = block;
+                let toolResult = "";
+                if (name === "createOrUpdateFiles") {
+                  const { files } = input as { files: { path: string; content: string }[] };
+                  if (sandboxId) {
+                    const sandbox = await Sandbox.connect(sandboxId);
+                    await sandbox.setTimeout(SANDBOX_TIMEOUT);
+                    for (const file of files) {
+                      await sandbox.files.write(file.path, file.content);
+                      currentFiles[file.path] = file.content;
+                    }
+                  }
+                  toolResult = "Files created successfully";
+                } else if (name === "terminal" && sandboxId) {
+                  const { command } = input as { command: string };
+                  const sandbox = await Sandbox.connect(sandboxId);
+                  await sandbox.setTimeout(SANDBOX_TIMEOUT);
+                  const result = await sandbox.commands.run(command);
+                  toolResult = result.stdout;
+                }
+                toolResults.push({ type: "tool_result", tool_use_id: toolId, content: toolResult });
+              }
+              claudeSectionMessages.push({ role: "user", content: toolResults });
+            }
+          }
+
+        } else {
+          // GPT section call
+          const sectionGptMessages: ChatCompletionMessageParam[] = [
+            { role: 'system', content: sectionSystemPrompt },
+            ...sectionMessages.map(msg => ({
+              role: msg.role === 'ASSISTANT' ? 'assistant' as const : 'user' as const,
+              content: msg.content as string,
+            }))
+          ];
+
+          let sectionDone = false;
+          let sectionIterations = 0;
+
+          while (!sectionDone && sectionIterations < 5) {
+            sectionIterations++;
+            const response = await openai.chat.completions.create({
+              model: selectedModel,
+              messages: sectionGptMessages,
+              tools,
+              tool_choice: 'auto',
+              temperature: 0.1,
+            });
+
+            const choice = response.choices[0];
+            const message = choice.message;
+
+            sectionGptMessages.push({
+              role: 'assistant',
+              content: message.content,
+              tool_calls: message.tool_calls
+            } as ChatCompletionMessageParam);
+
+            if (message.content?.includes('<task_summary>')) {
+              finalSummary = message.content;
+              sectionDone = true;
+            }
+
+            if (message.tool_calls && message.tool_calls.length > 0) {
+              for (const toolCall of message.tool_calls) {
+                if (toolCall.type !== 'function') continue;
+                const functionName = toolCall.function.name;
+                const functionArgs = JSON.parse(toolCall.function.arguments);
+                let toolResult = '';
+
+                if (functionName === 'createOrUpdateFiles' && functionArgs.files) {
+                  if (sandboxId) {
+                    const sandbox = await Sandbox.connect(sandboxId);
+                    await sandbox.setTimeout(SANDBOX_TIMEOUT);
+                    for (const file of functionArgs.files) {
+                      await sandbox.files.write(file.path, file.content);
+                      currentFiles[file.path] = file.content;
+                    }
+                  }
+                  toolResult = 'Files created successfully';
+                } else if (functionName === 'terminal' && sandboxId && functionArgs.command) {
+                  const sandbox = await Sandbox.connect(sandboxId);
+                  await sandbox.setTimeout(SANDBOX_TIMEOUT);
+                  const result = await sandbox.commands.run(functionArgs.command);
+                  toolResult = result.stdout;
+                }
+
+                sectionGptMessages.push({
+                  role: 'tool',
+                  content: toolResult || 'Tool execution completed',
+                  tool_call_id: toolCall.id
+                } as ChatCompletionMessageParam);
+              }
+            } else {
+              sectionDone = true;
+            }
+          }
+        }
+
+        console.log(`✅ Section ${sectionName} complete`);
+      }
+
+      // After all sections done, ask AI to assemble them
+      const assembleContext = `
+All sections have been built as separate components in the sandbox.
+Now create a main page file that imports and assembles all the section components together.
+Make sure all imports are correct and the page renders properly.
+  `.trim();
+
+      messages.push({ role: 'user', content: assembleContext });
+      finalSummary = `Built ${nodeEntries.length} sections and assembled into complete page.`;
+    }
+
+
     if (selectedModel === "claude-opus-4-6") {
       const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-      // Format messages for Claude
       const claudeMessages: Anthropic.MessageParam[] = formattedMessages.map(msg => ({
         role: msg.role === "ASSISTANT" ? "assistant" : "user",
         content: Array.isArray(msg.content)
@@ -326,73 +558,6 @@ Instructions:
           })
           : msg.content as string,
       }));
-
-      // Claude tool definitions
-      const claudeTools: Anthropic.Tool[] = isMobile ? [
-        {
-          name: "createOrUpdateFiles",
-          description: "Create or update React Native files",
-          input_schema: {
-            type: "object" as const,
-            properties: {
-              files: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    path: { type: "string" },
-                    content: { type: "string" },
-                  },
-                  required: ["path", "content"],
-                },
-              },
-            },
-            required: ["files"],
-          },
-        },
-      ] : [
-        {
-          name: "terminal",
-          description: "Run terminal commands",
-          input_schema: {
-            type: "object" as const,
-            properties: { command: { type: "string" } },
-            required: ["command"],
-          },
-        },
-        {
-          name: "createOrUpdateFiles",
-          description: "Create or update files in Next.js sandbox",
-          input_schema: {
-            type: "object" as const,
-            properties: {
-              files: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    path: { type: "string" },
-                    content: { type: "string" },
-                  },
-                  required: ["path", "content"],
-                },
-              },
-            },
-            required: ["files"],
-          },
-        },
-        {
-          name: "readFiles",
-          description: "Read files from sandbox",
-          input_schema: {
-            type: "object" as const,
-            properties: {
-              files: { type: "array", items: { type: "string" } },
-            },
-            required: ["files"],
-          },
-        },
-      ];
 
       let claudeIterations = 0;
 
@@ -410,7 +575,6 @@ Instructions:
 
         console.log("✅ Claude API call successful");
 
-        // Build assistant message from response
         const assistantContent: Anthropic.ContentBlock[] = [];
 
         for (const block of response.content) {
@@ -455,14 +619,12 @@ Instructions:
                 }
               }
               toolResult = "Files created successfully";
-
             } else if (name === "terminal" && sandboxId) {
               const { command } = input as { command: string };
               const sandbox = await Sandbox.connect(sandboxId);
               await sandbox.setTimeout(SANDBOX_TIMEOUT);
               const result = await sandbox.commands.run(command);
               toolResult = result.stdout;
-
             } else if (name === "readFiles" && sandboxId) {
               const { files } = input as { files: string[] };
               const sandbox = await Sandbox.connect(sandboxId);
