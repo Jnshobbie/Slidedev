@@ -378,8 +378,12 @@ ${JSON.stringify(node, null, 2)}
 
 Instructions:
 - Create ONLY the ${sectionName} component
-- Use exact colors, fonts, spacing from node data
-- Use image URLs directly in img src
+- Save it to src/components/${sectionName.replace(/\s+/g, '')}Section.tsx
+- Use exact colors from fills rgba values
+- Use exact font sizes and weights from text nodes
+- Use exact padding and gap from layoutMode properties
+- For any node that has an "imageUrl" field use that URL directly in img src or CSS background-image
+- Do NOT use placeholder images — only use imageUrl values found in the node data
 - Export as default
     `.trim();
 
@@ -531,11 +535,29 @@ Instructions:
       }
 
       // After all sections done, ask AI to assemble them
+      const sectionImports = nodeEntries.map(([id, node]) => {
+        const n = node as Record<string, unknown>;
+        const name = ((n.name as string) || id).replace(/\s+/g, '');
+        return `import ${name}Section from './components/${name}Section';`;
+      }).join('\n');
+
       const assembleContext = `
-All sections have been built as separate components in the sandbox.
-Now create a main page file that imports and assembles all the section components together.
-Make sure all imports are correct and the page renders properly.
-  `.trim();
+All sections have been built. Now create the main page file at exactly this path: src/app/page.tsx
+
+The file should import and render all section components:
+
+${sectionImports}
+
+export default function Page() {
+  return (
+    <main>
+      {/* render all sections here */}
+    </main>
+  );
+}
+
+Write this file to src/app/page.tsx — not to a directory.
+`.trim();
 
       messages.push({ role: 'user', content: assembleContext });
       finalSummary = `Built ${nodeEntries.length} sections and assembled into complete page.`;
