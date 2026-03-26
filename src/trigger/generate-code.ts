@@ -559,7 +559,9 @@ ${pageContent}
 Use createOrUpdateFiles with path "src/app/page.tsx" and that exact content above.
 `.trim();
 
-      messages.push({ role: 'user', content: assembleContext });
+      const assembleWithRefresh = assembleContext + `\n\nAfter writing the file, run this terminal command to ensure hot reload picks it up:\ntouch src/app/page.tsx`;
+
+      messages.push({ role: 'user', content: assembleWithRefresh });
       finalSummary = `Built ${nodeEntries.length} sections and assembled into complete page.`;
     }
 
@@ -812,6 +814,13 @@ Use createOrUpdateFiles with path "src/app/page.tsx" and that exact content abov
     if (!isMobile && sandboxId) {
       const sandbox = await Sandbox.connect(sandboxId);
       await sandbox.setTimeout(SANDBOX_TIMEOUT);
+      // Force hot reload
+      try {
+        const existing = await sandbox.files.read('src/app/page.tsx');
+        await sandbox.files.write('src/app/page.tsx', existing);
+      } catch {
+        console.log('⚠️ Could not force refresh page.tsx — file may not exist yet');
+      }
       const host = sandbox.getHost(3000);
       sandboxUrl = `https://${host}`;
     }
