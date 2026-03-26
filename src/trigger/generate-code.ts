@@ -535,28 +535,28 @@ Instructions:
       }
 
       // After all sections done, ask AI to assemble them
-      const sectionImports = nodeEntries.map(([id, node]) => {
+      const sectionComponents = nodeEntries.map(([id, node]) => {
         const n = node as Record<string, unknown>;
-        const name = ((n.name as string) || id).replace(/\s+/g, '');
-        return `import ${name}Section from './components/${name}Section';`;
-      }).join('\n');
+        return ((n.name as string) || id).replace(/\s+/g, '');
+      });
 
-      const assembleContext = `
-All sections have been built. Now create the main page file at exactly this path: src/app/page.tsx
-
-The file should import and render all section components:
-
-${sectionImports}
+      const pageContent = `"use client";
+${sectionComponents.map(name => `import ${name}Section from '../components/${name}Section';`).join('\n')}
 
 export default function Page() {
   return (
     <main>
-      {/* render all sections here */}
+      ${sectionComponents.map(name => `<${name}Section />`).join('\n      ')}
     </main>
   );
-}
+}`;
 
-Write this file to src/app/page.tsx — not to a directory.
+      const assembleContext = `
+All sections have been built. Now write EXACTLY this content to src/app/page.tsx using createOrUpdateFiles:
+
+${pageContent}
+
+Use createOrUpdateFiles with path "src/app/page.tsx" and that exact content above.
 `.trim();
 
       messages.push({ role: 'user', content: assembleContext });
