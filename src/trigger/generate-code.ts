@@ -378,7 +378,7 @@ ${JSON.stringify(node, null, 2)}
 
 Instructions:
 - Create ONLY the ${sectionName} component
-- Save it to src/components/${sectionName.replace(/\s+/g, '')}Section.tsx
+- Save it to components/${sectionName.replace(/\s+/g, '')}Section.tsx
 - Use exact colors from fills rgba values
 - Use exact font sizes and weights from text nodes
 - Use exact padding and gap from layoutMode properties
@@ -541,7 +541,7 @@ Instructions:
       });
 
       const pageContent = `"use client";
-${sectionComponents.map(name => `import ${name}Section from '../components/${name}Section';`).join('\n')}
+${sectionComponents.map(name => `import ${name}Section from './components/${name}Section';`).join('\n')}
 
 export default function Page() {
   return (
@@ -552,14 +552,14 @@ export default function Page() {
 }`;
 
       const assembleContext = `
-All sections have been built. Now write EXACTLY this content to src/app/page.tsx using createOrUpdateFiles:
+All sections have been built. Now write EXACTLY this content to app/page.tsx using createOrUpdateFiles:
 
 ${pageContent}
 
-Use createOrUpdateFiles with path "src/app/page.tsx" and that exact content above.
+Use createOrUpdateFiles with path "app/page.tsx" and that exact content above.
 `.trim();
 
-      const assembleWithRefresh = assembleContext + `\n\nAfter writing the file, run this terminal command to ensure hot reload picks it up:\ntouch src/app/page.tsx`;
+      const assembleWithRefresh = assembleContext + `\n\nAfter writing the file, run this terminal command to ensure hot reload picks it up:\ntouch app/page.tsx`;
 
       messages.push({ role: 'user', content: assembleWithRefresh });
       finalSummary = `Built ${nodeEntries.length} sections and assembled into complete page.`;
@@ -816,8 +816,8 @@ Use createOrUpdateFiles with path "src/app/page.tsx" and that exact content abov
       await sandbox.setTimeout(SANDBOX_TIMEOUT);
       // Force hot reload
       try {
-        const existing = await sandbox.files.read('src/app/page.tsx');
-        await sandbox.files.write('src/app/page.tsx', existing);
+        const existing = await sandbox.files.read('app/page.tsx');
+        await sandbox.files.write('app/page.tsx', existing);
       } catch {
         console.log('⚠️ Could not force refresh page.tsx — file may not exist yet');
       }
