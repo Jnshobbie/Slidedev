@@ -541,7 +541,7 @@ Instructions:
       });
 
       const pageContent = `"use client";
-${sectionComponents.map(name => `import ${name}Section from './components/${name}Section';`).join('\n')}
+${sectionComponents.map(name => `import ${name}Section from '../components/${name}Section';`).join('\n')}
 
 export default function Page() {
   return (
