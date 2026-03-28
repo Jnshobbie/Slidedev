@@ -350,6 +350,19 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
       },
     ];
 
+    // Inject imageUrls directly into node tree before sending to AI
+    function injectImageUrls(n: Record<string, unknown>, urlMap: Record<string, string>): Record<string, unknown> {
+      const result = { ...n };
+      if (result.id && urlMap[result.id as string]) {
+        result.imageUrl = urlMap[result.id as string];
+      }
+      if (Array.isArray(result.children)) {
+        result.children = (result.children as Record<string, unknown>[]).map(
+          child => injectImageUrls(child, urlMap)
+        );
+      }
+      return result;
+    }
 
     // Smart Export
     if (smartDesignData) {
@@ -363,6 +376,8 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
 
         console.log(`🎨 Building section: ${sectionName}`);
 
+        const enrichedNode = injectImageUrls(n, smartDesignData.imageUrls);
+
         const sectionContext = `
 SMART EXPORT - SECTION: ${sectionName}
 File: ${smartDesignData.fileName}
@@ -370,11 +385,8 @@ File: ${smartDesignData.fileName}
 Build ONLY this section as a React component named ${sectionName.replace(/\s+/g, '')}Section.
 Use exact values from the node data — no approximations.
 
-Real Image URLs:
-${JSON.stringify(smartDesignData.imageUrls, null, 2)}
-
-Node Data for this section:
-${JSON.stringify(node, null, 2)}
+Node Data for this section (imageUrl fields are ready-to-use Cloudinary URLs):
+${JSON.stringify(enrichedNode, null, 2)}
 
 Instructions:
 - Create ONLY the ${sectionName} component
@@ -385,7 +397,7 @@ Instructions:
 - For any node that has an "imageUrl" field use that URL directly in img src or CSS background-image
 - Do NOT use placeholder images — only use imageUrl values found in the node data
 - Export as default
-    `.trim();
+`.trim();
 
         // Add section context as first message for this iteration
         const sectionMessages = [
