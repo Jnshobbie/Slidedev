@@ -393,7 +393,9 @@ Instructions:
 - Save it to components/${sectionName.replace(/\s+/g, '')}Section.tsx
 - Use exact colors from fills rgba values
 - Use exact font sizes and weights from text nodes
-- Use exact padding and gap from layoutMode properties
+- Use exact padding and gap from layoutMode properties (paddingTop, paddingBottom, paddingLeft, paddingRight, itemSpacing)
+- Apply layoutMode as flexbox: HORIZONTAL = flex-row, VERTICAL = flex-col
+- Apply primaryAxisAlignItems and counterAxisAlignItems as justify/align classes
 - For any node that has an "imageUrl" field use that URL directly in img src or CSS background-image
 - Do NOT use placeholder images — only use imageUrl values found in the node data
 - Export as default

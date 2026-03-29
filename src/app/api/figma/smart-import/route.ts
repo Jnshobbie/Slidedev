@@ -84,7 +84,7 @@ async function extractAndUploadImages(
       n.children = await extractAndUploadImages(n.children as unknown[], importId, imageUrlMap);
     }
 
-    result.push(sanitizeNodeFills(n));
+    result.push(n);
   }
   return result;
 }
@@ -105,25 +105,6 @@ async function getExistingImageUrls(importId: string) {
   } catch {
     return {};
   }
-}
-
-function sanitizeNodeFills(node: Record<string, unknown>, depth = 0): Record<string, unknown> {
-  const cleaned = { ...node };
-
-  // Beyond depth 1, strip image fills (keep solid/gradient fills for colors)
-  if (depth > 1 && Array.isArray(cleaned.fills)) {
-    cleaned.fills = (cleaned.fills as Record<string, unknown>[]).filter(
-      (f) => f.type !== 'IMAGE'
-    );
-  }
-
-  if (Array.isArray(cleaned.children)) {
-    cleaned.children = (cleaned.children as Record<string, unknown>[]).map(
-      (child) => sanitizeNodeFills(child, depth + 1)
-    );
-  }
-
-  return cleaned;
 }
 
 function flattenNodes(nodes: unknown[]) {
