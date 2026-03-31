@@ -396,8 +396,16 @@ Instructions:
 - Use exact padding and gap from layoutMode properties (paddingTop, paddingBottom, paddingLeft, paddingRight, itemSpacing)
 - Apply layoutMode as flexbox: HORIZONTAL = flex-row, VERTICAL = flex-col
 - Apply primaryAxisAlignItems and counterAxisAlignItems as justify/align classes
+- primaryAxisAlignItems mapping: MIN=flex-start, CENTER=center, MAX=flex-end, SPACE_BETWEEN=space-between
+- counterAxisAlignItems mapping: MIN=flex-start, CENTER=center, MAX=flex-end
+- itemSpacing maps directly to gap in pixels
+- paddingTop/paddingBottom/paddingLeft/paddingRight map directly to padding in pixels
+- Do NOT approximate these values — use the exact pixel numbers from the node data
 - For any node that has an "imageUrl" field use that URL directly in img src or CSS background-image
+- For any node that has a "svgData" field render it as an inline <svg> using dangerouslySetInnerHTML={{ __html: node.svgData }}
 - Do NOT use placeholder images — only use imageUrl values found in the node data
+- For VECTOR nodes with no imageUrl, render them as inline SVG icons or use a suitable lucide-react icon — never render them as black boxes or filled divs
+- For button nodes, always check fills for background color — if fills array is empty the button is outlined/ghost style
 - Export as default
 `.trim();
 
