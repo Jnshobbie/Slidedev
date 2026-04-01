@@ -12,7 +12,7 @@ const corsHeaders = {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { fileName, nodes, images, importId: existingImportId, batchIndex, totalBatches } = body;
+    const { fileName, nodes, images, sectionImages, importId: existingImportId, batchIndex, totalBatches } = body;
 
     const importId = existingImportId || nanoid();
 
@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     const imageUrlMap: Record<string, string> = {};
     const sanitizedNodes = await extractAndUploadImages(nodes, importId, imageUrlMap);
 
+    const existingSectionImages = await getExistingSectionImages(importId);
     await prisma.figmaImport.upsert({
       where: { importId },
       update: {
@@ -31,6 +32,10 @@ export async function POST(req: Request) {
           ...(await getExistingImageUrls(importId)),
           ...imageUrlMap
         }),
+        sectionImages: JSON.stringify({
+          ...existingSectionImages,
+          ...(sectionImages || {})
+        }),
         updatedAt: new Date(),
       },
       create: {
@@ -39,6 +44,7 @@ export async function POST(req: Request) {
         fileName: fileName || 'Figma Design',
         designData: JSON.stringify(flattenNodes(sanitizedNodes)),
         imageUrls: JSON.stringify(imageUrlMap),
+        sectionImages: JSON.stringify(sectionImages || {}),
       }
     });
 
@@ -107,6 +113,14 @@ async function getExistingImageUrls(importId: string) {
   }
 }
 
+async function getExistingSectionImages(importId: string) {
+  try {
+    const existing = await prisma.figmaImport.findUnique({ where: { importId } });
+    return existing?.sectionImages ? JSON.parse(existing.sectionImages) : {};
+  } catch {
+    return {};
+  }
+}
 function flattenNodes(nodes: unknown[]) {
   if (!nodes || !Array.isArray(nodes)) return {};
   const result: Record<string, unknown> = {};

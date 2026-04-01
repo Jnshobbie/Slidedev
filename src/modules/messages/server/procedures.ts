@@ -100,6 +100,7 @@ export const messagesRouter = createTRPCRouter({
             fileName: figmaImport.fileName,
             nodes: JSON.parse(figmaImport.designData),
             imageUrls: JSON.parse(figmaImport.imageUrls),
+            sectionImages: figmaImport.sectionImages ? JSON.parse(figmaImport.sectionImages) : {},
           };
         }
       }

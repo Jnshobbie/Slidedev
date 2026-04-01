@@ -16,7 +16,7 @@ interface GenerateCodePayload {
   model?: string;
   attachments?: Array<{ url: string; type: string; name: string; size: number }>;
   figmaData?: FigmaImportResult;
-  smartDesignData?: { fileName: string; nodes: Record<string, unknown> | object[]; imageUrls: Record<string, string> };
+  smartDesignData?: { fileName: string; nodes: Record<string, unknown> | object[]; imageUrls: Record<string, string>; sectionImages?: Record<string, string> };
 }
 
 export const generateCode = task({
@@ -404,15 +404,23 @@ Instructions:
 - For any node that has an "imageUrl" field use that URL directly in img src or CSS background-image
 - For any node that has a "svgData" field render it as an inline <svg> using dangerouslySetInnerHTML={{ __html: node.svgData }}
 - Do NOT use placeholder images — only use imageUrl values found in the node data
+- Do NOT render any text node whose content starts with "Placeholder for body text" or "Enter text into this container" — skip those nodes entirely
 - For VECTOR nodes with no imageUrl, render them as inline SVG icons or use a suitable lucide-react icon — never render them as black boxes or filled divs
 - For button nodes, always check fills for background color — if fills array is empty the button is outlined/ghost style
 - Export as default
 `.trim();
 
         // Add section context as first message for this iteration
+        const sectionImageUrl = smartDesignData.sectionImages?.[sectionName];
         const sectionMessages = [
           ...formattedMessages,
-          { role: "user" as const, content: sectionContext }
+          {
+            role: "user" as const,
+            content: sectionImageUrl ? [
+              { type: "text" as const, text: sectionContext },
+              { type: "image_url" as const, image_url: { url: sectionImageUrl, detail: "high" as const } }
+            ] : sectionContext
+          }
         ];
 
         // Run AI for this section
@@ -503,6 +511,7 @@ Instructions:
               temperature: 0.1,
             });
 
+            console.log(`📊 [${sectionName}] GPT tokens - input: ${response.usage?.prompt_tokens}, output: ${response.usage?.completion_tokens}`);
             const choice = response.choices[0];
             const message = choice.message;
 
@@ -620,7 +629,7 @@ Use createOrUpdateFiles with path "app/page.tsx" and that exact content above.
         });
 
         console.log("✅ Claude API call successful");
-
+        console.log(`📊 Claude tokens - input: ${response.usage.input_tokens}, output: ${response.usage.output_tokens}`);
         const assistantContent: Anthropic.ContentBlock[] = [];
 
         for (const block of response.content) {
@@ -720,6 +729,7 @@ Use createOrUpdateFiles with path "app/page.tsx" and that exact content above.
         });
 
         console.log('✅ GPT-5.2 API call successful');
+        console.log(`📊 Tokens - input: ${response.usage?.prompt_tokens}, output: ${response.usage?.completion_tokens}`);
 
         const choice = response.choices[0];
         const message = choice.message;
