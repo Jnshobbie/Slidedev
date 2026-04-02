@@ -407,6 +407,10 @@ Instructions:
 - Do NOT render any text node whose content starts with "Placeholder for body text" or "Enter text into this container" — skip those nodes entirely
 - For VECTOR nodes with no imageUrl, render them as inline SVG icons or use a suitable lucide-react icon — never render them as black boxes or filled divs
 - For button nodes, always check fills for background color — if fills array is empty the button is outlined/ghost style
+- The screenshot is provided as a VISUAL REFERENCE ONLY for overall layout structure
+- ALWAYS prioritize exact values from node data over what you see in the screenshot
+- Use node data for: exact colors (fills rgba), exact spacing (padding/gap), exact opacity, exact font sizes
+- Use screenshot only for: understanding the general layout structure and component arrangement
 - Export as default
 `.trim();
 
