@@ -6,6 +6,9 @@ const FREE_POINTS = 3;
 const PRO_POINTS = 100;
 const DURATION = 30 * 24 * 60 * 60; // 30 days
 const GENERATION_COST = 1;
+const SMART_FREE_POINTS = 2;
+const SMART_PRO_POINTS = 10;
+const SMART_PREMIUM_POINTS = 20; // coming soon
 
 async function getUserPlan(userId: string): Promise<"pro" | "free"> {
   const subscription = await prisma.subscription.findUnique({
@@ -68,4 +71,35 @@ export async function getUserSubscription(userId: string) {
     where: { userId },
   });
   return subscription;
+}
+
+export async function getSmartExportTracker() {
+  const { userId } = await auth();
+  if (!userId) throw new Error("User not authenticated");
+
+  const plan = await getUserPlan(userId);
+
+  const points = plan === "pro" ? SMART_PRO_POINTS : SMART_FREE_POINTS;
+
+  const smartTracker = new RateLimiterPrisma({
+    storeClient: prisma,
+    tableName: "usage",
+    points,
+    duration: DURATION,
+    keyPrefix: `smart-${plan}`,
+  });
+
+  return { smartTracker, userId };
+}
+
+export async function consumeSmartExportCredit() {
+  const { smartTracker, userId } = await getSmartExportTracker();
+  const result = await smartTracker.consume(userId, 1);
+  return result;
+}
+
+export async function getSmartExportStatus() {
+  const { smartTracker, userId } = await getSmartExportTracker();
+  const result = await smartTracker.get(userId);
+  return result;
 }

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
-import { consumeCredits } from "@/lib/usage";
+import { consumeCredits, consumeSmartExportCredit } from "@/lib/usage";
 import { generateCode } from "@/trigger/generate-code";
 
 const fileAttachmentSchema = z.object({
@@ -92,6 +92,14 @@ export const messagesRouter = createTRPCRouter({
 
       let smartDesignData = undefined;
       if (input.importId && input.mode === 'smart') {
+        try {
+          await consumeSmartExportCredit();
+        } catch {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "You have run out of Smart Export credits"
+          });
+        }
         const figmaImport = await prisma.figmaImport.findUnique({
           where: { importId: input.importId }
         });

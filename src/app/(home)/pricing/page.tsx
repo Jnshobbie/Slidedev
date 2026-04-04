@@ -26,6 +26,7 @@ export default function PricingPage() {
     { name: "Unlimited Projects", free: false, pro: true },
     { name: "Community Support", free: true, pro: true },
     { name: "Figma Import", free: false, pro: true },
+    { name: "Smart Export (Figma→Code)", free: "2/mo", pro: "10/mo" },
     { name: "Project Export", free: false, pro: true },
     { name: "Better AI models", free: false, pro: true },
   ];
@@ -35,13 +36,13 @@ export default function PricingPage() {
       name: "Free",
       price: "0",
       desc: "Perfect for getting started and testing ideas.",
-      features: ["1 project", "Basic templates", "Community support", "Limited figma import", "Limited project export"],
+      features: ["1 project", "Basic templates", "Community support", "Limited figma import", "2 Smart Exports/month", "Limited project export"],
     },
     {
       name: "Pro",
       price: isYearly ? "170" : "14.99",
       desc: "For startups and creators who want full power.",
-      features: ["100 credits", "Unlimited projects", "Premium templates", "Priority support", "Unlimited figma import", "Unlimited project export", "Better AI models"],
+      features: ["100 credits", "Unlimited projects", "Premium templates", "Priority support", "Unlimited figma import", "10 Smart Exports/month", "Unlimited project export", "Better AI models"],
       highlighted: true,
     },
   ];

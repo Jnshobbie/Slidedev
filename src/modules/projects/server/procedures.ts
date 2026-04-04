@@ -4,7 +4,7 @@ import { generateSlug } from "random-word-slugs";
 import { prisma } from "@/lib/db";
 import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
-import { consumeCredits } from "@/lib/usage";
+import { consumeCredits, consumeSmartExportCredit } from "@/lib/usage";
 import type { FigmaImportResult } from "@/lib/figma/types";
 import { generateCode } from "@/trigger/generate-code";
 
@@ -100,6 +100,14 @@ export const projectsRouter = createTRPCRouter({
 
       let smartDesignData = undefined;
       if (input.importId && input.mode === 'smart') {
+        try {
+          await consumeSmartExportCredit();
+        } catch {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "You have run out of Smart Export credits"
+          });
+        }
         const figmaImport = await prisma.figmaImport.findUnique({
           where: { importId: input.importId }
         });
@@ -125,5 +133,28 @@ export const projectsRouter = createTRPCRouter({
       console.log('✅ GPT-5.2 job initiated from projects');
 
       return createdProject;
+    }),
+
+    delete: protectedProcedure
+    .input(z.object({
+      id: z.string().min(1, { message: "Id is required" }),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const existingProject = await prisma.project.findUnique({
+        where: {
+          id: input.id,
+          userId: ctx.auth.userId,
+        },
+      });
+
+      if (!existingProject) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
+      }
+
+      await prisma.project.delete({
+        where: { id: input.id },
+      });
+
+      return { success: true };
     }),
 });

@@ -1,8 +1,18 @@
-import { getUsageStatus, getUserSubscription } from "@/lib/usage";
+import { getUsageStatus, getUserSubscription, getSmartExportStatus } from "@/lib/usage";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { auth } from "@clerk/nextjs/server";
 
 export const usageRouter = createTRPCRouter({
+
+  smartExportStatus: protectedProcedure.query(async () => {
+    try {
+      const result = await getSmartExportStatus();
+      return result;
+    } catch {
+      return null;
+    }
+  }),
+
   status: protectedProcedure.query(async () => {
     try {
       const result = await getUsageStatus();
