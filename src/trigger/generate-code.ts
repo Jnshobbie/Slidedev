@@ -383,7 +383,9 @@ SMART EXPORT - SECTION: ${sectionName}
 File: ${smartDesignData.fileName}
 
 Build ONLY this section as a React component named ${sectionName.replace(/\s+/g, '')}Section.
-Use exact values from the node data — no approximations.
+Your goal is PIXEL PERFECT accuracy. The screenshot is your source of truth — match it exactly.
+Use node data for precise values (colors, spacing, font sizes). If node data is incomplete, confusing, or overwhelming, approximate confidently from the screenshot — never produce broken or off-layout output.
+When in doubt between data and screenshot, trust the screenshot visually but use data for exact values.
 
 Node Data for this section (imageUrl fields are ready-to-use Cloudinary URLs):
 ${JSON.stringify(enrichedNode, null, 2)}
@@ -400,7 +402,7 @@ Instructions:
 - counterAxisAlignItems mapping: MIN=flex-start, CENTER=center, MAX=flex-end
 - itemSpacing maps directly to gap in pixels
 - paddingTop/paddingBottom/paddingLeft/paddingRight map directly to padding in pixels
-- Do NOT approximate these values — use the exact pixel numbers from the node data
+- Use exact pixel numbers from node data when available — if missing or inconsistent, approximate from the screenshot to achieve pixel-perfect output
 - For any node that has an "imageUrl" field use that URL directly in img src or CSS background-image
 - For any node that has a "svgData" field render it as an inline <svg> using dangerouslySetInnerHTML={{ __html: node.svgData }}
 - Do NOT use placeholder images — only use imageUrl values found in the node data
