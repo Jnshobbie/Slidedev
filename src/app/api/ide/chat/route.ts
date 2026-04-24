@@ -12,7 +12,7 @@ export async function OPTIONS() {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, x-ide-token',
     },
   });
 }
@@ -84,7 +84,7 @@ ${files.map(f => `\`\`\`\n// ${f.path}\n${f.content}\n\`\`\``).join('\n\n')}`;
       'Transfer-Encoding': 'chunked',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, x-ide-token',
     },
   });
 }
