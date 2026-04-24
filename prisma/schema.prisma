@@ -82,6 +82,14 @@ model Subscription {
   updatedAt          DateTime  @updatedAt
 }
 
+model IdeToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
 model FigmaImport {
   id         String   @id @default(uuid())
   importId   String   @unique
