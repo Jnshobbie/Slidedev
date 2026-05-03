@@ -7,6 +7,7 @@ import { useTRPC } from "@/trpc/client";
 import Link from "next/link";
 
 const CHECKOUT_LINK = "https://slidedevteam.lemonsqueezy.com/checkout/buy/5627e94d-d244-4233-9ac3-23528c0bbc4c";
+const IDE_CHECKOUT_LINK = "https://slidedevteam.lemonsqueezy.com/checkout/buy/YOUR_IDE_PRODUCT_ID";
 
 export default function PricingPage() {
   const [isYearly, setIsYearly] = useState(false);
@@ -45,6 +46,23 @@ export default function PricingPage() {
       features: ["100 credits", "Unlimited projects", "Premium templates", "Priority support", "Unlimited figma import", "10 Smart Exports/month", "Unlimited project export", "Better AI models"],
       highlighted: true,
     },
+    {
+      name: "IDE Premium",
+      price: isYearly ? "290" : "29",
+      desc: "Full AI coding power in the SlideDevAI desktop IDE.",
+      features: [
+        "1,000,000 Sonnet tokens/mo",
+        "200,000 Opus tokens/mo",
+        "Claude Sonnet 4.6 (fast)",
+        "Claude Opus 4.6 (powerful)",
+        "Real-time token usage tracking",
+        "Monaco editor + file tree",
+        "Integrated terminal",
+        "Accept/Reject AI diffs",
+      ],
+      highlighted: false,
+      isIde: true,
+    },
   ];
 
   const renderButton = (plan: typeof plans[0]) => {
@@ -61,6 +79,24 @@ export default function PricingPage() {
         <Link href={getCheckoutLink()} target="_blank" rel="noopener noreferrer" className="w-full">
           <button className="mt-10 py-3 rounded-xl font-medium w-full transition bg-gradient-to-r from-[#0071ff] via-[#0055ff] to-[#0033aa] text-white hover:opacity-90">
             Upgrade to Pro
+          </button>
+        </Link>
+      );
+    }
+
+    // IDE plan button
+    if (plan.name === "IDE Premium") {
+      if (currentPlan === "ide") {
+        return (
+          <button className="mt-10 py-3 rounded-xl font-medium bg-gray-800 text-gray-400 cursor-default w-full">
+            Your current plan
+          </button>
+        );
+      }
+      return (
+        <Link href={IDE_CHECKOUT_LINK} target="_blank" rel="noopener noreferrer" className="w-full">
+          <button className="mt-10 py-3 rounded-xl font-medium w-full transition bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 text-white hover:opacity-90">
+            Get IDE Premium
           </button>
         </Link>
       );
@@ -128,7 +164,7 @@ export default function PricingPage() {
         </div>
 
         {/* Cards */}
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {plans.map((plan) => (
             <motion.div
               key={plan.name}

@@ -41,6 +41,11 @@ export async function POST(req: Request) {
       case "subscription_payment_success": {
         const variantId = event.data?.attributes?.variant_id as number | null;
 
+        const IDE_VARIANT_ID = process.env.LS_IDE_VARIANT_ID
+          ? parseInt(process.env.LS_IDE_VARIANT_ID)
+          : null;
+        const isIdePlan = IDE_VARIANT_ID && variantId === IDE_VARIANT_ID;
+
         // Get your variant IDs from LemonSqueezy dashboard
         const YEARLY_VARIANT_ID = process.env.LS_YEARLY_VARIANT_ID
           ? parseInt(process.env.LS_YEARLY_VARIANT_ID)
@@ -63,14 +68,14 @@ export async function POST(req: Request) {
         await prisma.subscription.upsert({
           where: { userId: user.id },
           update: {
-            plan: "pro",
+            plan: isIdePlan ? "ide" : "pro",
             status: "active",
             lsSubscriptionId,
             expiresAt,
           },
           create: {
             userId: user.id,
-            plan: "pro",
+            plan: isIdePlan ? "ide" : "pro",
             status: "active",
             lsSubscriptionId,
             expiresAt,

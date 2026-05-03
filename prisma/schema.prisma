@@ -90,6 +90,17 @@ model IdeToken {
   createdAt DateTime @default(now())
 }
 
+model IdeUsage {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  sonnetTokensUsed  Int  @default(0)
+  opusTokensUsed    Int  @default(0)
+  periodStart DateTime
+  periodEnd   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model FigmaImport {
   id         String   @id @default(uuid())
   importId   String   @unique
