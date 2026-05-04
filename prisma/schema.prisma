@@ -101,6 +101,25 @@ model IdeUsage {
   updatedAt   DateTime @updatedAt
 }
 
+model IdeConversation {
+  id         String   @id @default(cuid())
+  userId     String
+  title      String
+  folderPath String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages  IdeMessage[]
+}
+
+model IdeMessage {
+  id             String          @id @default(cuid())
+  conversationId String
+  conversation   IdeConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String          // "user" | "assistant"
+  content        String          @db.Text
+  createdAt      DateTime        @default(now())
+}
+
 model FigmaImport {
   id         String   @id @default(uuid())
   importId   String   @unique
