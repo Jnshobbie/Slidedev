@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { meLimiter, rateLimitResponse } from '@/lib/ide-rate-limit';
+import { isBlocked, recordFailedAttempt } from '@/lib/token-guard';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -26,16 +28,26 @@ export async function GET(req: NextRequest) {
   const ideToken = req.headers.get('x-ide-token');
   if (!ideToken) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // Block IPs with too many failed attempts
+  const ip = req.headers.get('x-forwarded-for') ?? 'unknown';
+  if (isBlocked(ip)) {
+    return NextResponse.json({ error: 'Too many failed attempts' }, { status: 429 });
+  }
+
   const tokenRecord = await prisma.ideToken.findUnique({ where: { token: ideToken } });
   if (!tokenRecord || tokenRecord.expiresAt < new Date()) {
+    recordFailedAttempt(ip);
     return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
   }
 
+  // userId is now defined — safe to rate limit per user
   const userId = tokenRecord.userId;
+  const { allowed, retryAfter } = meLimiter(userId);
+  if (!allowed) return rateLimitResponse(retryAfter!);
+
   const subscription = await prisma.subscription.findUnique({ where: { userId } });
   const isIde = subscription?.plan === 'ide' && subscription?.status === 'active';
 
-  // Get or create usage for current period
   const { start, end } = getPeriodBounds();
   let usage = await prisma.ideUsage.findUnique({ where: { userId } });
   if (!usage || usage.periodEnd < new Date()) {

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { conversationsLimiter, rateLimitResponse } from '@/lib/ide-rate-limit';
+import { isBlocked, recordFailedAttempt } from '@/lib/token-guard';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -21,8 +23,19 @@ export async function OPTIONS() {
 
 // GET — load all messages for a conversation
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const ip = req.headers.get('x-forwarded-for') ?? 'unknown';
+  if (isBlocked(ip)) {
+    return NextResponse.json({ error: 'Too many failed attempts' }, { status: 429 });
+  }
+
   const userId = await validateToken(req);
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!userId) {
+    recordFailedAttempt(ip);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { allowed, retryAfter } = conversationsLimiter(userId);
+  if (!allowed) return rateLimitResponse(retryAfter!);
 
   const { id } = await params;
   const conversation = await prisma.ideConversation.findUnique({
@@ -39,8 +52,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 // PATCH — append messages to conversation
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const ip = req.headers.get('x-forwarded-for') ?? 'unknown';
+  if (isBlocked(ip)) {
+    return NextResponse.json({ error: 'Too many failed attempts' }, { status: 429 });
+  }
+
   const userId = await validateToken(req);
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!userId) {
+    recordFailedAttempt(ip);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { allowed, retryAfter } = conversationsLimiter(userId);
+  if (!allowed) return rateLimitResponse(retryAfter!);
 
   const { id } = await params;
   const conversation = await prisma.ideConversation.findUnique({ where: { id } });
@@ -52,6 +76,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     messages: { role: string; content: string }[];
   };
 
+  // Guard against oversized message batches
+  if (!Array.isArray(messages) || messages.length > 10) {
+    return NextResponse.json({ error: 'Invalid messages' }, { status: 400 });
+  }
+
   await prisma.ideMessage.createMany({
     data: messages.map(m => ({
       conversationId: id,
@@ -60,7 +89,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     })),
   });
 
-  // Update conversation updatedAt
   await prisma.ideConversation.update({
     where: { id },
     data: { updatedAt: new Date() },
@@ -71,8 +99,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 // DELETE — delete a conversation
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const ip = req.headers.get('x-forwarded-for') ?? 'unknown';
+  if (isBlocked(ip)) {
+    return NextResponse.json({ error: 'Too many failed attempts' }, { status: 429 });
+  }
+
   const userId = await validateToken(req);
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!userId) {
+    recordFailedAttempt(ip);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { allowed, retryAfter } = conversationsLimiter(userId);
+  if (!allowed) return rateLimitResponse(retryAfter!);
 
   const { id } = await params;
   const conversation = await prisma.ideConversation.findUnique({ where: { id } });

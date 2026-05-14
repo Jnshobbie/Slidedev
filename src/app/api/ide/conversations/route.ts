@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { conversationsLimiter, rateLimitResponse } from '@/lib/ide-rate-limit';
+import { isBlocked, recordFailedAttempt } from '@/lib/token-guard';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -21,8 +23,19 @@ export async function OPTIONS() {
 
 // GET — list recent conversations
 export async function GET(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for') ?? 'unknown';
+  if (isBlocked(ip)) {
+    return NextResponse.json({ error: 'Too many failed attempts' }, { status: 429 });
+  }
+
   const userId = await validateToken(req);
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!userId) {
+    recordFailedAttempt(ip);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { allowed, retryAfter } = conversationsLimiter(userId);
+  if (!allowed) return rateLimitResponse(retryAfter!);
 
   const conversations = await prisma.ideConversation.findMany({
     where: { userId },
@@ -46,18 +59,34 @@ export async function GET(req: NextRequest) {
 
 // POST — create new conversation
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for') ?? 'unknown';
+  if (isBlocked(ip)) {
+    return NextResponse.json({ error: 'Too many failed attempts' }, { status: 429 });
+  }
+
   const userId = await validateToken(req);
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!userId) {
+    recordFailedAttempt(ip);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { allowed, retryAfter } = conversationsLimiter(userId);
+  if (!allowed) return rateLimitResponse(retryAfter!);
 
   const { firstMessage, folderPath } = await req.json() as {
     firstMessage: string;
     folderPath?: string;
   };
 
-  // Auto-generate title from first message (max 50 chars)
-  const title = firstMessage.length > 50
-    ? firstMessage.slice(0, 47) + '...'
-    : firstMessage;
+  // Sanitize input
+  if (!firstMessage || typeof firstMessage !== 'string') {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  }
+  const sanitizedMessage = firstMessage.slice(0, 500);
+
+  const title = sanitizedMessage.length > 50
+    ? sanitizedMessage.slice(0, 47) + '...'
+    : sanitizedMessage;
 
   const conversation = await prisma.ideConversation.create({
     data: { userId, title, folderPath: folderPath ?? null },
