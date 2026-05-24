@@ -14,10 +14,17 @@ export default function IdeAuthPage() {
       return;
     }
 
+    const params = new URLSearchParams(window.location.search);
+    const callback = params.get('callback');
+
     fetch('/api/ide/auth', { method: 'POST' })
       .then(r => r.json())
       .then(({ token }) => {
-        window.location.href = `slidedevai://auth?token=${token}`;
+        if (callback && callback.startsWith('http://localhost:')) {
+          window.location.href = `${callback}?token=${token}`;
+        } else {
+          window.location.href = `slidedevai://auth?token=${token}`;
+        }
         setStatus('success');
       })
       .catch(() => setStatus('error'));
