@@ -7,7 +7,7 @@ import { useTRPC } from "@/trpc/client";
 import Link from "next/link";
 
 const CHECKOUT_LINK = "https://slidedevteam.lemonsqueezy.com/checkout/buy/5627e94d-d244-4233-9ac3-23528c0bbc4c";
-const IDE_CHECKOUT_LINK = "https://slidedevteam.lemonsqueezy.com/checkout/buy/YOUR_IDE_PRODUCT_ID";
+const IDE_CHECKOUT_LINK = "https://slidedevteam.lemonsqueezy.com/checkout/buy/2cb7f1da-538b-4437-ba68-0fe408fb74d0";
 
 export default function PricingPage() {
   const [isYearly, setIsYearly] = useState(false);
@@ -94,12 +94,20 @@ export default function PricingPage() {
         );
       }
       return (
-        <Link href={IDE_CHECKOUT_LINK} target="_blank" rel="noopener noreferrer" className="w-full">
-          <button className="mt-10 py-3 rounded-xl font-medium w-full transition bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 text-white hover:opacity-90">
-            Get IDE Premium
-          </button>
-        </Link>
-      );
+  <>
+    <Link href={IDE_CHECKOUT_LINK} target="_blank" rel="noopener noreferrer" className="w-full">
+      <button className="mt-10 py-3 rounded-xl font-medium w-full transition bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 text-white hover:opacity-90">
+        Get IDE Premium
+      </button>
+    </Link>
+    
+      <a href="https://github.com/Jnshobbie/SlideDev-SSO-IDE/releases/download/v1.3.3/SlideDevAI-Setup-1.1.3.exe"
+      className="mt-3 py-3 rounded-xl font-medium w-full transition bg-gray-800 text-white hover:bg-gray-700 flex items-center justify-center"
+    >
+      Download IDE — Free
+    </a>
+  </>
+);
     }
 
     // Free plan button
