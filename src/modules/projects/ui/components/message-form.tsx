@@ -311,7 +311,7 @@ export const MessageForm = ({ projectId }: Props) => {
                             disabled={isPending}
                             title="Generate with GSAP motion animations"
                             className={cn(
-                                "inline-flex items-center gap-1.5 rounded-full px-3 h-8 text-xs font-medium transition-all",
+                                "inline-flex items-center gap-1.5 rounded-full px-3 h-8 text-xs font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                                 gsapMode
                                     ? "bg-primary/20 text-primary border border-primary/30"
                                     : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
