@@ -57,6 +57,7 @@ export const projectsRouter = createTRPCRouter({
         attachments: z.array(fileAttachmentSchema).optional(),
         figmaData: z.custom<FigmaImportResult>().optional(),
         model: z.string().optional(),
+        gsapMode: z.boolean().optional(),
         importId: z.string().optional(),
         mode: z.string().optional(),
       }),
@@ -79,6 +80,7 @@ export const projectsRouter = createTRPCRouter({
       const createdProject = await prisma.project.create({
         data: {
           model: input.model || "gpt-5.2", // default, user can change later
+          gsapMode: input.gsapMode ?? false,
           userId: ctx.auth.userId,
           name: generateSlug(2, {
             format: "kebab",
@@ -124,6 +126,7 @@ export const projectsRouter = createTRPCRouter({
       await generateCode.trigger({
         projectId: createdProject.id,
         model: createdProject.model,
+        gsapMode: createdProject.gsapMode,
         value: input.value,
         attachments: input.attachments,
         figmaData: input.figmaData,

@@ -1,0 +1,698 @@
+[
+  {
+    "id": "vanilla-basic-animations",
+    "technique": "basic-animations",
+    "framework": "vanilla",
+    "sourceFile": "awesome-gsap/html/modules/basic-animations/basic-animations.js",
+    "code": "// Basic Animations Module JavaScript\n\n// Module definition\nwindow.BasicAnimations = {\n    name: 'Basic Animations',\n    \n    init: function() {\n        const boxes = document.querySelectorAll('#basic-animations-demo .tween-box');\n        \n        // Reset all boxes\n        gsap.set(boxes, { \n            scale: 1, \n            rotation: 0, \n            x: 0, \n            y: 0,\n            backgroundColor: '#00ff88'\n        });\n        \n        // Add animating class to prevent interaction during animation\n        boxes.forEach(box => box.classList.add('animating'));\n        \n        // Scale animation\n        if (boxes[0]) {\n            gsap.to(boxes[0], {\n                scale: 1.5,\n                duration: 1,\n                ease: \"bounce.out\",\n                yoyo: true,\n                repeat: 1,\n                onComplete: () => {\n                    boxes[0].classList.remove('animating');\n                }\n            });\n        }\n        \n        // Rotation animation\n        if (boxes[1]) {\n            gsap.to(boxes[1], {\n                rotation: 360,\n                duration: 1,\n                ease: \"power2.inOut\",\n                delay: 0.2,\n                onComplete: () => {\n                    boxes[1].classList.remove('animating');\n                }\n            });\n        }\n        \n        // Movement animation\n        if (boxes[2]) {\n            gsap.to(boxes[2], {\n                x: 50,\n                y: -30,\n                duration: 1,\n                ease: \"elastic.out(1, 0.3)\",\n                delay: 0.4,\n                yoyo: true,\n                repeat: 1,\n                onComplete: () => {\n                    boxes[2].classList.remove('animating');\n                }\n            });\n        }\n        \n        console.log('Basic Animations module loaded');\n    },\n    \n    // Reset function\n    reset: function() {\n        const boxes = document.querySelectorAll('#basic-animations-demo .tween-box');\n        gsap.killTweensOf(boxes);\n        gsap.set(boxes, { \n            scale: 1, \n            rotation: 0, \n            x: 0, \n            y: 0,\n            backgroundColor: '#00ff88'\n        });\n        boxes.forEach(box => box.classList.remove('animating'));\n    }\n};\n\n// Auto-register module\nif (typeof window.GSAPModules === 'undefined') {\n    window.GSAPModules = {};\n}\nwindow.GSAPModules['basic-animations'] = window.BasicAnimations;\n",
+    "params": {
+      "ease": [
+        "bounce.out",
+        "power2.inOut",
+        "elastic.out(1, 0.3)"
+      ],
+      "duration": [
+        1,
+        1,
+        1
+      ],
+      "stagger": null,
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "vanilla-card-reveals",
+    "technique": "card-reveals",
+    "framework": "vanilla",
+    "sourceFile": "awesome-gsap/html/modules/card-reveals/card-reveals.js",
+    "code": "// Card Reveals Module JavaScript\n\n// Module definition\nwindow.CardReveals = {\n    name: 'Card Reveals',\n    scrollTriggerInstance: null,\n    \n    init: function() {\n        // Register ScrollTrigger plugin\n        gsap.registerPlugin(ScrollTrigger);\n        \n        const cards = document.querySelectorAll('#card-reveals-demo .card');\n        if (!cards.length) return;\n        \n        // Reset cards\n        gsap.set(cards, {\n            y: 50,\n            opacity: 0,\n            scale: 0.8\n        });\n        \n        cards.forEach(card => {\n            card.classList.remove('revealed', 'animating');\n        });\n        \n        // Create reveal animation\n        this.scrollTriggerInstance = gsap.to(cards, {\n            y: 0,\n            opacity: 1,\n            scale: 1,\n            duration: 0.8,\n            ease: \"back.out(1.7)\",\n            stagger: 0.2,\n            scrollTrigger: {\n                trigger: cards[0],\n                start: \"top 80%\",\n                toggleActions: \"play none none reverse\",\n                onEnter: () => {\n                    cards.forEach((card, index) => {\n                        setTimeout(() => {\n                            card.classList.add('revealed');\n                        }, index * 200);\n                    });\n                },\n                onLeave: () => {\n                    cards.forEach(card => {\n                        card.classList.remove('revealed');\n                    });\n                },\n                onEnterBack: () => {\n                    cards.forEach((card, index) => {\n                        setTimeout(() => {\n                            card.classList.add('revealed');\n                        }, index * 200);\n                    });\n                },\n                onLeaveBack: () => {\n                    cards.forEach(card => {\n                        card.classList.remove('revealed');\n                    });\n                }\n            },\n            onStart: () => {\n                cards.forEach(card => card.classList.add('animating'));\n            },\n            onComplete: () => {\n                cards.forEach(card => card.classList.remove('animating'));\n            }\n        });\n        \n        // Add individual hover effects\n        cards.forEach((card, index) => {\n            card.addEventListener('click', () => {\n                if (!card.classList.contains('animating')) {\n                    gsap.to(card, {\n                        scale: 0.95,\n                        duration: 0.1,\n                        yoyo: true,\n                        repeat: 1,\n                        ease: \"power2.out\",\n                        onComplete: () => {\n                            gsap.to(card, {\n                                rotation: 360,\n                                duration: 0.6,\n                                ease: \"power2.out\"\n                            });\n                        }\n                    });\n                }\n            });\n        });\n        \n        console.log('Card Reveals module loaded');\n    },\n    \n    // Reset function\n    reset: function() {\n        const cards = document.querySelectorAll('#card-reveals-demo .card');\n        \n        // Kill ScrollTrigger instance\n        if (this.scrollTriggerInstance) {\n            this.scrollTriggerInstance.kill();\n            this.scrollTriggerInstance = null;\n        }\n        \n        // Reset cards\n        gsap.killTweensOf(cards);\n        gsap.set(cards, {\n            y: 0,\n            opacity: 1,\n            scale: 1,\n            rotation: 0\n        });\n        \n        cards.forEach(card => {\n            card.classList.remove('revealed', 'animating');\n        });\n        \n        // Refresh ScrollTrigger\n        ScrollTrigger.refresh();\n    }\n};\n\n// Auto-register module\nif (typeof window.GSAPModules === 'undefined') {\n    window.GSAPModules = {};\n}\nwindow.GSAPModules['card-reveals'] = window.CardReveals;\n",
+    "params": {
+      "ease": [
+        "back.out(1.7)",
+        "power2.out"
+      ],
+      "duration": [
+        0.8,
+        0.1,
+        0.6
+      ],
+      "stagger": [
+        0.2
+      ],
+      "usesScrollTrigger": true,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "vanilla-hover-interactions",
+    "technique": "hover-interactions",
+    "framework": "vanilla",
+    "sourceFile": "awesome-gsap/html/modules/hover-interactions/hover-interactions.js",
+    "code": "// Hover Interactions Module JavaScript\n\n// Module definition\nwindow.HoverInteractions = {\n    name: 'Hover Interactions',\n    \n    init: function() {\n        const hoverBoxes = document.querySelectorAll('#hover-interactions-demo .hover-box');\n        if (!hoverBoxes.length) return;\n        \n        // Reset boxes\n        gsap.set(hoverBoxes, {\n            scale: 1,\n            rotation: 0,\n            backgroundColor: \"#4ecdc4\"\n        });\n        \n        hoverBoxes.forEach(box => {\n            box.classList.remove('animating');\n        });\n        \n        // Setup hover effects for each box\n        hoverBoxes.forEach((box, index) => {\n            if (index === 0) {\n                // First box: Hover effects\n                box.addEventListener('mouseenter', () => {\n                    if (!box.classList.contains('animating')) {\n                        gsap.to(box, {\n                            scale: 1.2,\n                            rotation: 15,\n                            backgroundColor: \"#ff6b6b\",\n                            duration: 0.3,\n                            ease: \"back.out(1.7)\"\n                        });\n                    }\n                });\n                \n                box.addEventListener('mouseleave', () => {\n                    if (!box.classList.contains('animating')) {\n                        gsap.to(box, {\n                            scale: 1,\n                            rotation: 0,\n                            backgroundColor: \"#4ecdc4\",\n                            duration: 0.3,\n                            ease: \"power2.out\"\n                        });\n                    }\n                });\n            } else {\n                // Second box: Click effects\n                box.addEventListener('click', () => {\n                    if (!box.classList.contains('animating')) {\n                        box.classList.add('animating');\n                        \n                        gsap.to(box, {\n                            scale: 0.8,\n                            duration: 0.1,\n                            ease: \"power2.out\",\n                            yoyo: true,\n                            repeat: 1,\n                            onComplete: () => {\n                                gsap.to(box, {\n                                    rotation: \"+=360\",\n                                    backgroundColor: \"#00ff88\",\n                                    duration: 0.5,\n                                    ease: \"power2.out\",\n                                    onComplete: () => {\n                                        gsap.to(box, {\n                                            backgroundColor: \"#4ecdc4\",\n                                            duration: 0.3,\n                                            delay: 0.2,\n                                            onComplete: () => {\n                                                box.classList.remove('animating');\n                                            }\n                                        });\n                                    }\n                                });\n                            }\n                        });\n                    }\n                });\n                \n                // Hover effect for click box\n                box.addEventListener('mouseenter', () => {\n                    if (!box.classList.contains('animating')) {\n                        gsap.to(box, {\n                            scale: 1.1,\n                            duration: 0.3,\n                            ease: \"power2.out\"\n                        });\n                    }\n                });\n                \n                box.addEventListener('mouseleave', () => {\n                    if (!box.classList.contains('animating')) {\n                        gsap.to(box, {\n                            scale: 1,\n                            duration: 0.3,\n                            ease: \"power2.out\"\n                        });\n                    }\n                });\n            }\n        });\n        \n        console.log('Hover Interactions module loaded');\n    },\n    \n    // Reset function\n    reset: function() {\n        const hoverBoxes = document.querySelectorAll('#hover-interactions-demo .hover-box');\n        \n        gsap.killTweensOf(hoverBoxes);\n        gsap.set(hoverBoxes, {\n            scale: 1,\n            rotation: 0,\n            backgroundColor: \"#4ecdc4\"\n        });\n        \n        hoverBoxes.forEach(box => {\n            box.classList.remove('animating');\n        });\n    }\n};\n\n// Auto-register module\nif (typeof window.GSAPModules === 'undefined') {\n    window.GSAPModules = {};\n}\nwindow.GSAPModules['hover-interactions'] = window.HoverInteractions;\n",
+    "params": {
+      "ease": [
+        "back.out(1.7)",
+        "power2.out"
+      ],
+      "duration": [
+        0.3,
+        0.3,
+        0.1,
+        0.5,
+        0.3,
+        0.3,
+        0.3
+      ],
+      "stagger": null,
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "vanilla-loading-animations",
+    "technique": "loading-animations",
+    "framework": "vanilla",
+    "sourceFile": "awesome-gsap/html/modules/loading-animations/loading-animations.js",
+    "code": "// Loading Animations Module JavaScript\n\n// Module definition\nwindow.LoadingAnimations = {\n    name: 'Loading Animations',\n    \n    init: function() {\n        const loaderDots = document.querySelectorAll('#loading-animations-demo .loader-dot');\n        \n        if (!loaderDots.length) {\n            console.warn('Loading Animations: Required elements not found');\n            return;\n        }\n        \n        // Reset dots\n        gsap.set(loaderDots, {\n            scale: 1,\n            backgroundColor: \"#00ff88\"\n        });\n        \n        // Add animating class\n        loaderDots.forEach(dot => dot.classList.add('animating'));\n        \n        // Pulsing animation\n        gsap.to(loaderDots, {\n            scale: 1.5,\n            backgroundColor: \"#ff6b6b\",\n            duration: 0.6,\n            ease: \"power2.inOut\",\n            stagger: 0.2,\n            repeat: 3,\n            yoyo: true,\n            onComplete: () => {\n                gsap.set(loaderDots, {\n                    scale: 1,\n                    backgroundColor: \"#00ff88\"\n                });\n                \n                // Remove animating class\n                loaderDots.forEach(dot => dot.classList.remove('animating'));\n            }\n        });\n        \n        console.log('Loading Animations module loaded');\n    },\n    \n    // Reset function\n    reset: function() {\n        const loaderDots = document.querySelectorAll('#loading-animations-demo .loader-dot');\n        \n        gsap.killTweensOf(loaderDots);\n        gsap.set(loaderDots, {\n            scale: 1,\n            backgroundColor: \"#00ff88\"\n        });\n        \n        loaderDots.forEach(dot => dot.classList.remove('animating'));\n    }\n};\n\n// Auto-register module\nif (typeof window.GSAPModules === 'undefined') {\n    window.GSAPModules = {};\n}\nwindow.GSAPModules['loading-animations'] = window.LoadingAnimations;\n",
+    "params": {
+      "ease": [
+        "power2.inOut"
+      ],
+      "duration": [
+        0.6
+      ],
+      "stagger": [
+        0.2
+      ],
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "vanilla-mouse-follow",
+    "technique": "mouse-follow",
+    "framework": "vanilla",
+    "sourceFile": "awesome-gsap/html/modules/mouse-follow/mouse-follow.js",
+    "code": "// Mouse Follow Module JavaScript\n\n// Module definition\nwindow.MouseFollow = {\n    name: 'Mouse Follow',\n    \n    init: function() {\n        const mouseArea = document.querySelector('#mouse-follow-demo .mouse-follow-area');\n        const follower = document.querySelector('#mouse-follow-demo .follower');\n        \n        if (!mouseArea || !follower) {\n            console.warn('Mouse Follow: Required elements not found');\n            return;\n        }\n        \n        // Reset follower\n        gsap.set(follower, {\n            x: 0,\n            y: 0,\n            scale: 0,\n            opacity: 0\n        });\n        \n        // Mouse move handler\n        const handleMouseMove = (e) => {\n            const rect = mouseArea.getBoundingClientRect();\n            const x = e.clientX - rect.left;\n            const y = e.clientY - rect.top;\n            \n            gsap.to(follower, {\n                x: x - 10,\n                y: y - 10,\n                duration: 0.3,\n                ease: \"power2.out\"\n            });\n        };\n        \n        // Mouse enter handler\n        const handleMouseEnter = () => {\n            gsap.to(follower, {\n                scale: 1,\n                opacity: 1,\n                duration: 0.3,\n                ease: \"back.out(1.7)\"\n            });\n        };\n        \n        // Mouse leave handler\n        const handleMouseLeave = () => {\n            gsap.to(follower, {\n                scale: 0,\n                opacity: 0,\n                duration: 0.3,\n                ease: \"power2.out\"\n            });\n        };\n        \n        // Add event listeners\n        mouseArea.addEventListener('mousemove', handleMouseMove);\n        mouseArea.addEventListener('mouseenter', handleMouseEnter);\n        mouseArea.addEventListener('mouseleave', handleMouseLeave);\n        \n        console.log('Mouse Follow module loaded');\n    },\n    \n    // Reset function\n    reset: function() {\n        const mouseArea = document.querySelector('#mouse-follow-demo .mouse-follow-area');\n        const follower = document.querySelector('#mouse-follow-demo .follower');\n        \n        if (mouseArea && follower) {\n            // Remove event listeners\n            mouseArea.removeEventListener('mousemove', this.handleMouseMove);\n            mouseArea.removeEventListener('mouseenter', this.handleMouseEnter);\n            mouseArea.removeEventListener('mouseleave', this.handleMouseLeave);\n            \n            // Reset follower\n            gsap.killTweensOf(follower);\n            gsap.set(follower, {\n                x: 0,\n                y: 0,\n                scale: 0,\n                opacity: 0\n            });\n        }\n    }\n};\n\n// Auto-register module\nif (typeof window.GSAPModules === 'undefined') {\n    window.GSAPModules = {};\n}\nwindow.GSAPModules['mouse-follow'] = window.MouseFollow;\n",
+    "params": {
+      "ease": [
+        "power2.out",
+        "back.out(1.7)"
+      ],
+      "duration": [
+        0.3,
+        0.3,
+        0.3
+      ],
+      "stagger": null,
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "vanilla-parallax-effects",
+    "technique": "parallax-effects",
+    "framework": "vanilla",
+    "sourceFile": "awesome-gsap/html/modules/parallax-effects/parallax-effects.js",
+    "code": "// Parallax Effects Module JavaScript\n\n// Module definition\nwindow.ParallaxEffects = {\n    name: 'Parallax Effects',\n    scrollTriggerInstances: [],\n    \n    init: function() {\n        // Register ScrollTrigger plugin\n        gsap.registerPlugin(ScrollTrigger);\n        \n        const parallaxBg = document.querySelector('#parallax-effects-demo .parallax-bg');\n        const parallaxContent = document.querySelector('#parallax-effects-demo .parallax-content');\n        const parallaxContainer = document.querySelector('#parallax-effects-demo .parallax-container');\n        \n        if (!parallaxBg || !parallaxContent || !parallaxContainer) return;\n        \n        // Reset elements\n        gsap.set(parallaxBg, { yPercent: 0 });\n        gsap.set(parallaxContent, { y: 0, opacity: 1 });\n        \n        parallaxContainer.classList.add('animating');\n        \n        // Parallax background effect\n        const bgAnimation = gsap.to(parallaxBg, {\n            yPercent: -50,\n            ease: \"none\",\n            scrollTrigger: {\n                trigger: parallaxContainer,\n                start: \"top bottom\",\n                end: \"bottom top\",\n                scrub: true,\n                refreshPriority: -1\n            }\n        });\n        \n        this.scrollTriggerInstances.push(bgAnimation);\n        \n        // Content reveal animation\n        const contentAnimation = gsap.fromTo(parallaxContent, {\n            y: 50,\n            opacity: 0\n        }, {\n            y: 0,\n            opacity: 1,\n            duration: 1,\n            ease: \"power2.out\",\n            scrollTrigger: {\n                trigger: parallaxContent,\n                start: \"top 70%\",\n                toggleActions: \"play none none reverse\"\n            }\n        });\n        \n        this.scrollTriggerInstances.push(contentAnimation);\n        \n        // Add extra visual effects\n        gsap.to(parallaxContainer, {\n            boxShadow: \"0 12px 35px rgba(0, 0, 0, 0.3)\",\n            duration: 2,\n            ease: \"power2.out\",\n            scrollTrigger: {\n                trigger: parallaxContainer,\n                start: \"top 80%\",\n                toggleActions: \"play none none reverse\"\n            }\n        });\n        \n        console.log('Parallax Effects module loaded');\n    },\n    \n    // Reset function\n    reset: function() {\n        const parallaxBg = document.querySelector('#parallax-effects-demo .parallax-bg');\n        const parallaxContent = document.querySelector('#parallax-effects-demo .parallax-content');\n        const parallaxContainer = document.querySelector('#parallax-effects-demo .parallax-container');\n        \n        // Kill all ScrollTrigger instances\n        this.scrollTriggerInstances.forEach(instance => {\n            if (instance && instance.kill) {\n                instance.kill();\n            }\n        });\n        this.scrollTriggerInstances = [];\n        \n        if (parallaxBg && parallaxContent && parallaxContainer) {\n            // Reset elements\n            gsap.set(parallaxBg, { yPercent: 0 });\n            gsap.set(parallaxContent, { y: 0, opacity: 1 });\n            gsap.set(parallaxContainer, { boxShadow: \"0 8px 25px rgba(0, 0, 0, 0.2)\" });\n            \n            parallaxContainer.classList.remove('animating');\n        }\n        \n        // Refresh ScrollTrigger\n        ScrollTrigger.refresh();\n    }\n};\n\n// Auto-register module\nif (typeof window.GSAPModules === 'undefined') {\n    window.GSAPModules = {};\n}\nwindow.GSAPModules['parallax-effects'] = window.ParallaxEffects;\n",
+    "params": {
+      "ease": [
+        "none",
+        "power2.out"
+      ],
+      "duration": [
+        1,
+        2
+      ],
+      "stagger": null,
+      "usesScrollTrigger": true,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "vanilla-scroll-trigger",
+    "technique": "scroll-trigger",
+    "framework": "vanilla",
+    "sourceFile": "awesome-gsap/html/modules/scroll-trigger/scroll-trigger.js",
+    "code": "// ScrollTrigger Module JavaScript\n\n// Module definition\nwindow.ScrollTriggerModule = {\n    name: 'ScrollTrigger',\n    scrollTriggerInstance: null,\n    \n    init: function() {\n        // Register ScrollTrigger plugin\n        gsap.registerPlugin(ScrollTrigger);\n        \n        const scrollBox = document.querySelector('#scroll-trigger-demo .scroll-box');\n        if (!scrollBox) return;\n        \n        // Reset the box\n        gsap.set(scrollBox, {\n            scale: 0.5,\n            rotation: 0,\n            backgroundColor: \"#ff6b6b\"\n        });\n        \n        scrollBox.classList.remove('triggered');\n        \n        // Create ScrollTrigger animation\n        this.scrollTriggerInstance = gsap.fromTo(scrollBox, {\n            scale: 0.5,\n            rotation: 0,\n            backgroundColor: \"#ff6b6b\"\n        }, {\n            scale: 1.2,\n            rotation: 360,\n            backgroundColor: \"#00ff88\",\n            duration: 1,\n            ease: \"back.out(1.7)\",\n            scrollTrigger: {\n                trigger: scrollBox,\n                start: \"top 80%\",\n                end: \"bottom 20%\",\n                scrub: 1,\n                toggleActions: \"play none none reverse\",\n                onEnter: () => {\n                    scrollBox.classList.add('triggered');\n                },\n                onLeave: () => {\n                    scrollBox.classList.remove('triggered');\n                },\n                onEnterBack: () => {\n                    scrollBox.classList.add('triggered');\n                },\n                onLeaveBack: () => {\n                    scrollBox.classList.remove('triggered');\n                },\n                // Add markers for debugging (remove in production)\n                // markers: true\n            }\n        });\n        \n        console.log('ScrollTrigger module loaded');\n    },\n    \n    // Reset function\n    reset: function() {\n        const scrollBox = document.querySelector('#scroll-trigger-demo .scroll-box');\n        if (!scrollBox) return;\n        \n        // Kill existing ScrollTrigger\n        if (this.scrollTriggerInstance) {\n            this.scrollTriggerInstance.kill();\n            this.scrollTriggerInstance = null;\n        }\n        \n        // Reset the box\n        gsap.set(scrollBox, {\n            scale: 1,\n            rotation: 0,\n            backgroundColor: \"#ff6b6b\"\n        });\n        \n        scrollBox.classList.remove('triggered');\n        \n        // Refresh ScrollTrigger\n        ScrollTrigger.refresh();\n    }\n};\n\n// Auto-register module\nif (typeof window.GSAPModules === 'undefined') {\n    window.GSAPModules = {};\n}\nwindow.GSAPModules['scroll-trigger'] = window.ScrollTriggerModule;\n",
+    "params": {
+      "ease": [
+        "back.out(1.7)"
+      ],
+      "duration": [
+        1
+      ],
+      "stagger": null,
+      "usesScrollTrigger": true,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "vanilla-shape-morphing",
+    "technique": "shape-morphing",
+    "framework": "vanilla",
+    "sourceFile": "awesome-gsap/html/modules/shape-morphing/shape-morphing.js",
+    "code": "// Shape Morphing Module JavaScript\n\n// Module definition\nwindow.ShapeMorphing = {\n    name: 'Shape Morphing',\n    \n    init: function() {\n        const morphShape = document.querySelector('#shape-morphing-demo .morph-shape');\n        \n        if (!morphShape) {\n            console.warn('Shape Morphing: Required elements not found');\n            return;\n        }\n        \n        // Add animating class\n        morphShape.classList.add('animating');\n        \n        const shapes = [\n            \"M100,50 L150,150 L50,150 Z\", // Triangle\n            \"M50,100 Q100,50 150,100 Q100,150 50,100\", // Diamond-like\n            \"M100,50 A50,50 0 1,1 100,150 A50,50 0 1,1 100,50\", // Circle\n            \"M50,75 L150,75 L150,125 L50,125 Z\", // Rectangle\n            \"M100,50 L150,150 L50,150 Z\" // Back to triangle\n        ];\n        \n        const colors = [\"#00ff88\", \"#ff6b6b\", \"#4ecdc4\", \"#8B5CF6\", \"#00ff88\"];\n        \n        const tl = gsap.timeline({\n            onComplete: () => {\n                morphShape.classList.remove('animating');\n            }\n        });\n        \n        shapes.forEach((shape, index) => {\n            tl.to(morphShape, {\n                attr: { d: shape },\n                fill: colors[index],\n                duration: 1,\n                ease: \"power2.inOut\"\n            }, index * 1.2);\n        });\n        \n        console.log('Shape Morphing module loaded');\n    },\n    \n    // Reset function\n    reset: function() {\n        const morphShape = document.querySelector('#shape-morphing-demo .morph-shape');\n        \n        if (morphShape) {\n            gsap.killTweensOf(morphShape);\n            gsap.set(morphShape, {\n                attr: { d: \"M100,50 L150,150 L50,150 Z\" },\n                fill: \"#00ff88\"\n            });\n            morphShape.classList.remove('animating');\n        }\n    }\n};\n\n// Auto-register module\nif (typeof window.GSAPModules === 'undefined') {\n    window.GSAPModules = {};\n}\nwindow.GSAPModules['shape-morphing'] = window.ShapeMorphing;\n",
+    "params": {
+      "ease": [
+        "power2.inOut"
+      ],
+      "duration": [
+        1
+      ],
+      "stagger": null,
+      "usesScrollTrigger": false,
+      "usesTimeline": true
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "vanilla-svg-path",
+    "technique": "svg-path",
+    "framework": "vanilla",
+    "sourceFile": "awesome-gsap/html/modules/svg-path/svg-path.js",
+    "code": "// SVG Path Animation Module JavaScript\n\n// Module definition\nwindow.SvgPath = {\n    name: 'SVG Path Animation',\n    \n    init: function() {\n        // Check if MotionPathPlugin is available\n        if (typeof MotionPathPlugin === 'undefined') {\n            console.warn('SVG Path: MotionPathPlugin not available, using fallback animation');\n            this.initFallback();\n            return;\n        }\n        \n        gsap.registerPlugin(MotionPathPlugin);\n        \n        const pathFollower = document.querySelector('#svg-path-demo .path-follower');\n        const motionPath = document.querySelector('#svg-path-demo .motion-path');\n        \n        if (!pathFollower || !motionPath) {\n            console.warn('SVG Path: Required elements not found');\n            return;\n        }\n        \n        // Add animating class\n        pathFollower.classList.add('animating');\n        \n        // Reset position\n        gsap.set(pathFollower, { \n            motionPath: { path: motionPath, start: 0 }\n        });\n        \n        // Animate along path\n        gsap.to(pathFollower, {\n            motionPath: {\n                path: motionPath,\n                align: motionPath,\n                alignOrigin: [0.5, 0.5],\n                autoRotate: true\n            },\n            duration: 3,\n            ease: \"power2.inOut\",\n            repeat: 1,\n            yoyo: true,\n            onComplete: () => {\n                pathFollower.classList.remove('animating');\n            }\n        });\n        \n        // Add scale animation\n        gsap.to(pathFollower, {\n            scale: 1.5,\n            duration: 1.5,\n            ease: \"sine.inOut\",\n            repeat: 1,\n            yoyo: true\n        });\n        \n        console.log('SVG Path module loaded');\n    },\n    \n    // Fallback animation without MotionPathPlugin\n    initFallback: function() {\n        const pathFollower = document.querySelector('#svg-path-demo .path-follower');\n        \n        if (!pathFollower) return;\n        \n        // Simple circular motion as fallback\n        gsap.to(pathFollower, {\n            rotation: 360,\n            transformOrigin: \"150px 100px\",\n            duration: 3,\n            ease: \"power2.inOut\",\n            repeat: 1,\n            yoyo: true\n        });\n        \n        gsap.to(pathFollower, {\n            scale: 1.5,\n            duration: 1.5,\n            ease: \"sine.inOut\",\n            repeat: 1,\n            yoyo: true\n        });\n    },\n    \n    // Reset function\n    reset: function() {\n        const pathFollower = document.querySelector('#svg-path-demo .path-follower');\n        \n        if (pathFollower) {\n            gsap.killTweensOf(pathFollower);\n            gsap.set(pathFollower, {\n                x: 0,\n                y: 0,\n                rotation: 0,\n                scale: 1\n            });\n            pathFollower.classList.remove('animating');\n        }\n    }\n};\n\n// Auto-register module\nif (typeof window.GSAPModules === 'undefined') {\n    window.GSAPModules = {};\n}\nwindow.GSAPModules['svg-path'] = window.SvgPath;\n",
+    "params": {
+      "ease": [
+        "power2.inOut",
+        "sine.inOut"
+      ],
+      "duration": [
+        3,
+        1.5,
+        3,
+        1.5
+      ],
+      "stagger": null,
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "vanilla-text-animations",
+    "technique": "text-animations",
+    "framework": "vanilla",
+    "sourceFile": "awesome-gsap/html/modules/text-animations/text-animations.js",
+    "code": "// Text Animations Module JavaScript\n\n// Module definition\nwindow.TextAnimations = {\n    name: 'Text Animations',\n    originalText: 'Hello GSAP World!',\n    \n    init: function() {\n        const textElement = document.querySelector('#text-animations-demo .animated-text');\n        if (!textElement) return;\n        \n        // Store original text if not already stored\n        if (!this.originalText) {\n            this.originalText = textElement.textContent;\n        }\n        \n        const text = this.originalText;\n        const chars = text.split('');\n        \n        // Split text into spans\n        textElement.innerHTML = chars.map(char => \n            char === ' ' ? '&nbsp;' : `<span class=\"char\">${char}</span>`\n        ).join('');\n        \n        const charElements = textElement.querySelectorAll('.char');\n        \n        // Add animating class\n        textElement.classList.add('animating');\n        \n        // Animate characters entrance\n        gsap.fromTo(charElements, {\n            opacity: 0,\n            y: 50,\n            rotation: 180,\n            scale: 0\n        }, {\n            opacity: 1,\n            y: 0,\n            rotation: 0,\n            scale: 1,\n            duration: 0.8,\n            ease: \"back.out(1.7)\",\n            stagger: 0.05,\n            onComplete: () => {\n                // Color wave animation\n                gsap.to(charElements, {\n                    color: \"#00ff88\",\n                    duration: 0.3,\n                    stagger: 0.05,\n                    yoyo: true,\n                    repeat: 1,\n                    onComplete: () => {\n                        // Bounce effect\n                        gsap.to(charElements, {\n                            y: -10,\n                            duration: 0.2,\n                            stagger: 0.03,\n                            yoyo: true,\n                            repeat: 1,\n                            ease: \"power2.out\",\n                            onComplete: () => {\n                                textElement.classList.remove('animating');\n                            }\n                        });\n                    }\n                });\n            }\n        });\n        \n        console.log('Text Animations module loaded');\n    },\n    \n    // Reset function\n    reset: function() {\n        const textElement = document.querySelector('#text-animations-demo .animated-text');\n        if (!textElement) return;\n        \n        gsap.killTweensOf(textElement.querySelectorAll('.char'));\n        textElement.textContent = this.originalText;\n        textElement.classList.remove('animating');\n    }\n};\n\n// Auto-register module\nif (typeof window.GSAPModules === 'undefined') {\n    window.GSAPModules = {};\n}\nwindow.GSAPModules['text-animations'] = window.TextAnimations;\n",
+    "params": {
+      "ease": [
+        "back.out(1.7)",
+        "power2.out"
+      ],
+      "duration": [
+        0.8,
+        0.3,
+        0.2
+      ],
+      "stagger": [
+        0.05,
+        0.05,
+        0.03
+      ],
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "vanilla-timeline-sequences",
+    "technique": "timeline-sequences",
+    "framework": "vanilla",
+    "sourceFile": "awesome-gsap/html/modules/timeline-sequences/timeline-sequences.js",
+    "code": "// Timeline Sequences Module JavaScript\n\n// Module definition\nwindow.TimelineSequences = {\n    name: 'Timeline Sequences',\n    \n    init: function() {\n        const boxes = document.querySelectorAll('#timeline-sequences-demo .timeline-box');\n        const tl = gsap.timeline({\n            onComplete: () => {\n                boxes.forEach(box => box.classList.remove('animating'));\n            }\n        });\n        \n        // Reset positions\n        gsap.set(boxes, { \n            scale: 1, \n            rotation: 0, \n            y: 0, \n            opacity: 1,\n            backgroundColor: '#ff6b6b'\n        });\n        \n        // Add animating class\n        boxes.forEach(box => box.classList.add('animating'));\n        \n        // Create timeline sequence\n        tl.from(boxes[0], {\n            scale: 0,\n            rotation: 180,\n            duration: 0.5,\n            ease: \"back.out(1.7)\"\n        })\n        .from(boxes[1], {\n            y: -100,\n            opacity: 0,\n            duration: 0.5,\n            ease: \"bounce.out\"\n        }, \"-=0.3\")\n        .from(boxes[2], {\n            scale: 0,\n            rotation: -180,\n            duration: 0.5,\n            ease: \"back.out(1.7)\"\n        }, \"-=0.3\")\n        .from(boxes[3], {\n            y: 100,\n            opacity: 0,\n            duration: 0.5,\n            ease: \"bounce.out\"\n        }, \"-=0.3\")\n        .to(boxes, {\n            rotation: 360,\n            duration: 1,\n            ease: \"power2.inOut\",\n            stagger: 0.1\n        }, \"+=0.5\")\n        .to(boxes, {\n            backgroundColor: \"#00ff88\",\n            duration: 0.5,\n            stagger: 0.1\n        }, \"-=0.5\")\n        .to(boxes, {\n            backgroundColor: \"#ff6b6b\",\n            duration: 0.5,\n            stagger: 0.1\n        });\n        \n        console.log('Timeline Sequences module loaded');\n    },\n    \n    // Reset function\n    reset: function() {\n        const boxes = document.querySelectorAll('#timeline-sequences-demo .timeline-box');\n        gsap.killTweensOf(boxes);\n        gsap.set(boxes, { \n            scale: 1, \n            rotation: 0, \n            y: 0, \n            opacity: 1,\n            backgroundColor: '#ff6b6b'\n        });\n        boxes.forEach(box => box.classList.remove('animating'));\n    }\n};\n\n// Auto-register module\nif (typeof window.GSAPModules === 'undefined') {\n    window.GSAPModules = {};\n}\nwindow.GSAPModules['timeline-sequences'] = window.TimelineSequences;\n",
+    "params": {
+      "ease": [
+        "back.out(1.7)",
+        "bounce.out",
+        "power2.inOut"
+      ],
+      "duration": [
+        0.5,
+        0.5,
+        0.5,
+        0.5,
+        1,
+        0.5,
+        0.5
+      ],
+      "stagger": [
+        0.1,
+        0.1,
+        0.1
+      ],
+      "usesScrollTrigger": false,
+      "usesTimeline": true
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-AdvancedAnimations",
+    "technique": "advancedanimations",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/AdvancedAnimations/index.tsx",
+    "code": "\"use client\";\n\nimport { useRef, useState } from \"react\";\nimport { gsap } from \"gsap\";\nimport { MotionPathPlugin } from \"gsap/MotionPathPlugin\";\n\n// Register MotionPath plugin\nif (typeof window !== \"undefined\") {\n  gsap.registerPlugin(MotionPathPlugin);\n}\n\nconst AdvancedAnimations = () => {\n  const pathFollowerRef = useRef<SVGCircleElement>(null);\n  const morphShapeRef = useRef<SVGPathElement>(null);\n  const loaderDotsRef = useRef<HTMLDivElement[]>([]);\n  const [isLoaderActive, setIsLoaderActive] = useState(false);\n\n  const addToLoaderRefs = (el: HTMLDivElement | null, index: number) => {\n    if (el) {\n      loaderDotsRef.current[index] = el;\n    }\n  };\n\n  const playPathAnimation = () => {\n    if (pathFollowerRef.current) {\n      // Reset position\n      gsap.set(pathFollowerRef.current, {\n        motionPath: { path: \"#motion-path\", start: 0 },\n      });\n\n      // Animate along path\n      gsap.to(pathFollowerRef.current, {\n        motionPath: {\n          path: \"#motion-path\",\n          align: \"#motion-path\",\n          alignOrigin: [0.5, 0.5],\n          autoRotate: true,\n        },\n        duration: 3,\n        ease: \"power2.inOut\",\n        repeat: 1,\n        yoyo: true,\n      });\n\n      // Add scale animation\n      gsap.to(pathFollowerRef.current, {\n        scale: 1.5,\n        duration: 1.5,\n        ease: \"sine.inOut\",\n        repeat: 1,\n        yoyo: true,\n      });\n    }\n  };\n\n  const playMorphAnimation = () => {\n    if (morphShapeRef.current) {\n      const shapes = [\n        \"M100,50 L150,150 L50,150 Z\", // Triangle\n        \"M50,100 Q100,50 150,100 Q100,150 50,100\", // Diamond-like\n        \"M100,50 A50,50 0 1,1 100,150 A50,50 0 1,1 100,50\", // Circle\n        \"M50,75 L150,75 L150,125 L50,125 Z\", // Rectangle\n        \"M100,50 L150,150 L50,150 Z\", // Back to triangle\n      ];\n\n      const colors = [\"#10B981\", \"#EF4444\", \"#06B6D4\", \"#8B5CF6\", \"#10B981\"];\n\n      const tl = gsap.timeline();\n\n      shapes.forEach((shape, index) => {\n        tl.to(\n          morphShapeRef.current,\n          {\n            attr: { d: shape },\n            fill: colors[index],\n            duration: 1,\n            ease: \"power2.inOut\",\n          },\n          index * 1.2\n        );\n      });\n    }\n  };\n\n  const toggleLoader = () => {\n    if (!isLoaderActive) {\n      startLoader();\n    } else {\n      stopLoader();\n    }\n    setIsLoaderActive(!isLoaderActive);\n  };\n\n  const startLoader = () => {\n    // Pulsing animation\n    gsap.to(loaderDotsRef.current, {\n      scale: 1.5,\n      backgroundColor: \"#EF4444\",\n      duration: 0.6,\n      ease: \"power2.inOut\",\n      stagger: 0.2,\n      repeat: -1,\n      yoyo: true,\n    });\n  };\n\n  const stopLoader = () => {\n    gsap.killTweensOf(loaderDotsRef.current);\n\n    gsap.to(loaderDotsRef.current, {\n      scale: 1,\n      backgroundColor: \"#10B981\",\n      duration: 0.3,\n      ease: \"power2.out\",\n    });\n  };\n\n  return (\n    <section id=\"advanced\" className=\"py-20 min-h-screen\">\n      <div className=\"max-w-6xl mx-auto px-6\">\n        <h2 className=\"text-4xl font-bold text-white text-center mb-16\">\n          Advanced Animations\n        </h2>\n\n        {/* SVG Path Animation */}\n        <div className=\"mb-16 bg-white bg-opacity-10 rounded-2xl p-8 backdrop-blur-sm\">\n          <h3 className=\"text-2xl font-semibold text-white mb-6\">\n            SVG Path Animation\n          </h3>\n          <div className=\"flex justify-center items-center mb-8 min-h-[200px] bg-black bg-opacity-20 rounded-xl p-8\">\n            <svg\n              width=\"300\"\n              height=\"200\"\n              viewBox=\"0 0 300 200\"\n              className=\"overflow-visible cursor-pointer\"\n              onClick={playPathAnimation}\n            >\n              <path\n                id=\"motion-path\"\n                d=\"M50,100 Q150,50 250,100\"\n                stroke=\"#10B981\"\n                strokeWidth=\"2\"\n                fill=\"none\"\n              />\n              <circle ref={pathFollowerRef} r=\"8\" fill=\"#EF4444\" />\n            </svg>\n          </div>\n        </div>\n\n        {/* Morphing Animation */}\n        <div className=\"mb-16 bg-white bg-opacity-10 rounded-2xl p-8 backdrop-blur-sm\">\n          <h3 className=\"text-2xl font-semibold text-white mb-6\">\n            Morphing Animation\n          </h3>\n          <div className=\"flex justify-center items-center mb-8 min-h-[200px] bg-black bg-opacity-20 rounded-xl p-8\">\n            <svg width=\"200\" height=\"200\" viewBox=\"0 0 200 200\">\n              <path\n                ref={morphShapeRef}\n                d=\"M100,50 L150,150 L50,150 Z\"\n                fill=\"#10B981\"\n              />\n            </svg>\n          </div>\n          <button\n            onClick={playMorphAnimation}\n            className=\"bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-3 rounded-full font-medium hover:scale-105 transition-transform\"\n          >\n            Morph Shape\n          </button>\n        </div>\n\n        {/* Loading Animation */}\n        <div className=\"bg-white bg-opacity-10 rounded-2xl p-8 backdrop-blur-sm\">\n          <h3 className=\"text-2xl font-semibold text-white mb-6\">\n            Loading Animation\n          </h3>\n          <div\n            className=\"flex justify-center items-center mb-8 min-h-[200px] bg-black bg-opacity-20 rounded-xl p-8 cursor-pointer\"\n            onClick={toggleLoader}\n          >\n            <div className=\"flex gap-3\">\n              {[0, 1, 2].map((index) => (\n                <div\n                  key={index}\n                  ref={(el) => addToLoaderRefs(el, index)}\n                  className=\"w-5 h-5 bg-green-400 rounded-full\"\n                />\n              ))}\n            </div>\n          </div>\n        </div>\n      </div>\n    </section>\n  );\n};\n\nexport default AdvancedAnimations;\n",
+    "params": {
+      "ease": [
+        "power2.inOut",
+        "sine.inOut",
+        "power2.out"
+      ],
+      "duration": [
+        3,
+        1.5,
+        1,
+        0.6,
+        0.3
+      ],
+      "stagger": [
+        0.2
+      ],
+      "usesScrollTrigger": false,
+      "usesTimeline": true
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-BasicAnimations",
+    "technique": "basicanimations",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/BasicAnimations/index.tsx",
+    "code": "\"use client\";\n\nimport { useRef } from \"react\";\nimport {\n  useBasicAnimations,\n  useTextAnimation,\n  useTimelineSequence,\n} from \"@/hooks/useGSAP\";\n\ninterface BasicAnimationsProps {\n  variant?: \"full\" | \"module\";\n}\n\nconst BasicAnimations = ({ variant = \"full\" }: BasicAnimationsProps) => {\n  // Refs for different animation groups\n  const tweenBoxesRef = useRef<HTMLDivElement[]>([]);\n  const timelineBoxesRef = useRef<HTMLDivElement[]>([]);\n  const textRef = useRef<HTMLHeadingElement>(null);\n\n  // Custom hooks\n  const { scaleAnimation, rotateAnimation, moveAnimation, resetAll } =\n    useBasicAnimations();\n  const { splitTextAnimation, colorWaveAnimation } = useTextAnimation();\n  const { createSequence } = useTimelineSequence();\n\n  // Helper functions for refs\n  const addToTweenRefs = (el: HTMLDivElement | null, index: number) => {\n    if (el) {\n      tweenBoxesRef.current[index] = el;\n    }\n  };\n\n  const addToTimelineRefs = (el: HTMLDivElement | null, index: number) => {\n    if (el) {\n      timelineBoxesRef.current[index] = el;\n    }\n  };\n\n  // Animation handlers\n  const playBasicTweens = () => {\n    console.log(\"playBasicTweens called\");\n    console.log(\"tweenBoxesRef.current:\", tweenBoxesRef.current);\n\n    resetAll(tweenBoxesRef.current);\n\n    // Scale animation\n    if (tweenBoxesRef.current[0]) {\n      console.log(\"Starting scale animation\");\n      scaleAnimation(tweenBoxesRef.current[0]);\n    }\n\n    // Rotation animation\n    if (tweenBoxesRef.current[1]) {\n      console.log(\"Starting rotation animation\");\n      rotateAnimation(tweenBoxesRef.current[1], { delay: 0.2 });\n    }\n\n    // Movement animation\n    if (tweenBoxesRef.current[2]) {\n      console.log(\"Starting movement animation\");\n      moveAnimation(tweenBoxesRef.current[2], {\n        x: variant === \"module\" ? 50 : 100,\n        y: variant === \"module\" ? -30 : -50,\n        delay: 0.4,\n      });\n    }\n  };\n\n  const playTimeline = () => {\n    createSequence(timelineBoxesRef.current.filter(Boolean));\n  };\n\n  const playTextAnimation = () => {\n    if (textRef.current) {\n      splitTextAnimation(textRef.current);\n\n      // Add color wave effect\n      setTimeout(() => {\n        colorWaveAnimation(textRef.current!, { delay: 1 });\n      }, 1000);\n    }\n  };\n\n  // Module variant (simplified)\n  if (variant === \"module\") {\n    return (\n      <div\n        className=\"flex gap-4 justify-center items-center cursor-pointer\"\n        onClick={playBasicTweens}\n      >\n        <div\n          ref={(el) => addToTweenRefs(el, 0)}\n          className=\"w-20 h-20 bg-green-400 rounded-lg flex items-center justify-center text-gray-800 font-bold transition-colors\"\n        >\n          Scale\n        </div>\n        <div\n          ref={(el) => addToTweenRefs(el, 1)}\n          className=\"w-20 h-20 bg-green-400 rounded-lg flex items-center justify-center text-gray-800 font-bold transition-colors\"\n        >\n          Rotate\n        </div>\n        <div\n          ref={(el) => addToTweenRefs(el, 2)}\n          className=\"w-20 h-20 bg-green-400 rounded-lg flex items-center justify-center text-gray-800 font-bold transition-colors\"\n        >\n          Move\n        </div>\n      </div>\n    );\n  }\n\n  // Full variant (complete page section)\n  return (\n    <section id=\"basic\" className=\"py-20 min-h-screen\">\n      <div className=\"max-w-6xl mx-auto px-6\">\n        <h2 className=\"text-4xl font-bold text-white text-center mb-16\">\n          Basic Animations1\n        </h2>\n\n        {/* Simple Tweens */}\n        <div className=\"mb-16 bg-white bg-opacity-10 rounded-2xl p-8 backdrop-blur-sm\">\n          <h3 className=\"text-2xl font-semibold text-white mb-6\">\n            Simple Tweens\n          </h3>\n          <div\n            className=\"flex justify-center items-center gap-8 mb-8 min-h-[200px] bg-black bg-opacity-20 rounded-xl p-8 cursor-pointer\"\n            onClick={playBasicTweens}\n          >\n            <div\n              ref={(el) => addToTweenRefs(el, 0)}\n              className=\"w-20 h-20 bg-green-400 rounded-xl flex items-center justify-center text-black font-bold\"\n            >\n              Scale\n            </div>\n            <div\n              ref={(el) => addToTweenRefs(el, 1)}\n              className=\"w-20 h-20 bg-green-400 rounded-xl flex items-center justify-center text-black font-bold\"\n            >\n              Rotate\n            </div>\n            <div\n              ref={(el) => addToTweenRefs(el, 2)}\n              className=\"w-20 h-20 bg-green-400 rounded-xl flex items-center justify-center text-black font-bold\"\n            >\n              Move\n            </div>\n          </div>\n        </div>\n\n        {/* Timeline Example */}\n        <div className=\"mb-16 bg-white bg-opacity-10 rounded-2xl p-8 backdrop-blur-sm\">\n          <h3 className=\"text-2xl font-semibold text-white mb-6\">\n            Timeline Sequence\n          </h3>\n          <div\n            className=\"flex justify-center items-center gap-8 mb-8 min-h-[200px] bg-black bg-opacity-20 rounded-xl p-8 cursor-pointer\"\n            onClick={playTimeline}\n          >\n            {[1, 2, 3, 4].map((num, index) => (\n              <div\n                key={num}\n                ref={(el) => addToTimelineRefs(el, index)}\n                className=\"w-20 h-20 bg-red-400 rounded-xl flex items-center justify-center text-white font-bold text-2xl\"\n              >\n                {num}\n              </div>\n            ))}\n          </div>\n        </div>\n\n        {/* Text Animation */}\n        <div className=\"bg-white bg-opacity-10 rounded-2xl p-8 backdrop-blur-sm\">\n          <h3 className=\"text-2xl font-semibold text-white mb-6\">\n            Text Animation\n          </h3>\n          <div\n            className=\"flex justify-center items-center mb-8 min-h-[200px] bg-black bg-opacity-20 rounded-xl p-8 cursor-pointer\"\n            onClick={playTextAnimation}\n          >\n            <h2 ref={textRef} className=\"text-4xl font-bold text-white\">\n              Hello GSAP World!\n            </h2>\n          </div>\n        </div>\n      </div>\n\n      <style jsx>{`\n        .char {\n          display: inline-block;\n        }\n      `}</style>\n    </section>\n  );\n};\n\nexport default BasicAnimations;\n",
+    "params": {
+      "ease": [],
+      "duration": null,
+      "stagger": null,
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-CardReveals",
+    "technique": "cardreveals",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/CardReveals/index.tsx",
+    "code": "\"use client\";\n\nimport { useRef, useEffect } from \"react\";\nimport { gsap } from \"gsap\";\nimport { ScrollTrigger } from \"gsap/ScrollTrigger\";\n\nexport default function CardReveals() {\n  const cardsRef = useRef<(HTMLDivElement | null)[]>([]);\n  const containerRef = useRef<HTMLDivElement>(null);\n\n  useEffect(() => {\n    gsap.registerPlugin(ScrollTrigger);\n\n    const cards = cardsRef.current.filter(Boolean);\n\n    if (cards.length > 0) {\n      const animation = gsap.fromTo(\n        cards,\n        {\n          y: 50,\n          opacity: 0,\n          scale: 0.8,\n        },\n        {\n          y: 0,\n          opacity: 1,\n          scale: 1,\n          duration: 0.8,\n          ease: \"back.out(1.7)\",\n          stagger: 0.2,\n          scrollTrigger: {\n            trigger: containerRef.current,\n            start: \"top 80%\",\n            toggleActions: \"play none none reverse\",\n          },\n        }\n      );\n\n      return () => {\n        animation.kill();\n        ScrollTrigger.getAll().forEach((trigger) => {\n          if (trigger && typeof trigger.kill === \"function\") {\n            trigger.kill();\n          }\n        });\n      };\n    }\n  }, []);\n\n  const runAnimation = () => {\n    const cards = cardsRef.current.filter(Boolean);\n\n    // Reset cards\n    gsap.set(cards, {\n      y: 50,\n      opacity: 0,\n      scale: 0.8,\n    });\n\n    // Animate cards\n    gsap.to(cards, {\n      y: 0,\n      opacity: 1,\n      scale: 1,\n      duration: 0.8,\n      ease: \"back.out(1.7)\",\n      stagger: 0.2,\n      onComplete: () => {\n        // Add click effects\n        cards.forEach((card) => {\n          if (card) {\n            gsap.to(card, {\n              scale: 0.95,\n              duration: 0.1,\n              yoyo: true,\n              repeat: 1,\n              ease: \"power2.out\",\n              onComplete: () => {\n                gsap.to(card, {\n                  rotation: 360,\n                  duration: 0.6,\n                  ease: \"power2.out\",\n                });\n              },\n            });\n          }\n        });\n      },\n    });\n  };\n\n  return (\n    <div\n      ref={containerRef}\n      className=\"w-full cursor-pointer\"\n      onClick={runAnimation}\n    >\n      <div className=\"grid grid-cols-2 gap-4 max-w-md mx-auto\">\n        {[1, 2, 3, 4].map((num, index) => (\n          <div\n            key={num}\n            ref={(el) => {\n              if (el) cardsRef.current[index] = el;\n            }}\n            className=\"h-16 bg-white/10 backdrop-blur-sm rounded-lg flex items-center justify-center text-white font-bold transition-colors\"\n          >\n            Card {num}\n          </div>\n        ))}\n      </div>\n    </div>\n  );\n}\n",
+    "params": {
+      "ease": [
+        "back.out(1.7)",
+        "power2.out"
+      ],
+      "duration": [
+        0.8,
+        0.8,
+        0.1,
+        0.6
+      ],
+      "stagger": [
+        0.2,
+        0.2
+      ],
+      "usesScrollTrigger": true,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-Footer",
+    "technique": "footer",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/Footer/index.tsx",
+    "code": "'use client'\n\nconst Footer = () => {\n  return (\n    <footer className=\"bg-black bg-opacity-20 py-8\">\n      <div className=\"max-w-6xl mx-auto px-6 text-center\">\n        <p className=\"text-white\">\n          &copy; 2024 Awesome GSAP Examples. Built with ❤️ and GSAP + React + Next.js.\n        </p>\n      </div>\n    </footer>\n  )\n}\n\nexport default Footer\n",
+    "params": {
+      "ease": [],
+      "duration": null,
+      "stagger": null,
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-Hero",
+    "technique": "hero",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/Hero/index.tsx",
+    "code": "\"use client\";\n\nimport { useEffect, useRef } from \"react\";\nimport { gsap } from \"gsap\";\n\nconst Hero = () => {\n  const heroRef = useRef<HTMLDivElement>(null);\n  const titleRef = useRef<HTMLHeadingElement>(null);\n  const subtitleRef = useRef<HTMLParagraphElement>(null);\n  const floatingBoxesRef = useRef<HTMLDivElement[]>([]);\n\n  useEffect(() => {\n    const ctx = gsap.context(() => {\n      // Hero title animation\n      if (titleRef.current) {\n        gsap.fromTo(\n          titleRef.current,\n          { scale: 0, rotation: 180, opacity: 0 },\n          {\n            scale: 1,\n            rotation: 0,\n            opacity: 1,\n            duration: 1.5,\n            ease: \"back.out(1.7)\",\n            delay: 1,\n          }\n        );\n      }\n\n      // Subtitle animation\n      if (subtitleRef.current) {\n        gsap.fromTo(\n          subtitleRef.current,\n          { y: 50, opacity: 0 },\n          {\n            y: 0,\n            opacity: 1,\n            duration: 1,\n            ease: \"power2.out\",\n            delay: 1.5,\n          }\n        );\n      }\n\n      // Floating boxes animation\n      // Predefined animation values for consistency\n      const animationValues = [\n        {\n          x: 200,\n          y: 150,\n          rotation: 45,\n          scale: 0.8,\n          moveY: 30,\n          moveX: 20,\n          rotateBy: 15,\n          duration: 4,\n          delay: 0,\n        },\n        {\n          x: 800,\n          y: 100,\n          rotation: 120,\n          scale: 1.2,\n          moveY: -40,\n          moveX: -25,\n          rotateBy: -20,\n          duration: 3.5,\n          delay: 0.5,\n        },\n        {\n          x: 300,\n          y: 400,\n          rotation: 270,\n          scale: 0.6,\n          moveY: 50,\n          moveX: 15,\n          rotateBy: 25,\n          duration: 5,\n          delay: 1,\n        },\n        {\n          x: 700,\n          y: 500,\n          rotation: 180,\n          scale: 1.0,\n          moveY: -30,\n          moveX: -20,\n          rotateBy: -10,\n          duration: 3,\n          delay: 1.5,\n        },\n        {\n          x: 500,\n          y: 200,\n          rotation: 90,\n          scale: 0.9,\n          moveY: 40,\n          moveX: 30,\n          rotateBy: 20,\n          duration: 4.5,\n          delay: 0.8,\n        },\n        {\n          x: 400,\n          y: 350,\n          rotation: 315,\n          scale: 0.7,\n          moveY: -20,\n          moveX: 25,\n          rotateBy: -15,\n          duration: 3.8,\n          delay: 1.2,\n        },\n      ];\n\n      floatingBoxesRef.current.forEach((box, index) => {\n        if (box && animationValues[index]) {\n          const values = animationValues[index];\n\n          // Initial position\n          gsap.set(box, {\n            x: values.x,\n            y: values.y,\n            rotation: values.rotation,\n            scale: values.scale,\n          });\n\n          // Floating animation\n          gsap.to(box, {\n            y: `+=${values.moveY}`,\n            x: `+=${values.moveX}`,\n            rotation: `+=${values.rotateBy}`,\n            duration: values.duration,\n            ease: \"sine.inOut\",\n            repeat: -1,\n            yoyo: true,\n            delay: index * 0.3,\n          });\n\n          // Continuous floating\n          gsap.to(box, {\n            y: \"+=20\",\n            duration: 2,\n            ease: \"sine.inOut\",\n            repeat: -1,\n            yoyo: true,\n            delay: values.delay,\n          });\n        }\n      });\n    }, heroRef);\n\n    return () => ctx.revert();\n  }, []);\n\n  const addToRefs = (el: HTMLDivElement | null, index: number) => {\n    if (el) {\n      floatingBoxesRef.current[index] = el;\n    }\n  };\n\n  return (\n    <section\n      id=\"hero\"\n      ref={heroRef}\n      className=\"relative h-screen flex items-center justify-center text-center overflow-hidden\"\n    >\n      {/* Floating background elements */}\n      <div className=\"absolute inset-0 pointer-events-none\">\n        {[\n          { left: 15, top: 20 },\n          { left: 85, top: 10 },\n          { left: 25, top: 70 },\n          { left: 75, top: 80 },\n          { left: 60, top: 30 },\n          { left: 40, top: 60 },\n        ].map((position, index) => (\n          <div\n            key={index}\n            ref={(el) => addToRefs(el, index)}\n            className=\"absolute w-16 h-16 bg-white bg-opacity-20 rounded-xl backdrop-blur-sm\"\n            style={{\n              left: `${position.left}%`,\n              top: `${position.top}%`,\n            }}\n          />\n        ))}\n      </div>\n\n      {/* Hero content */}\n      <div className=\"relative z-10 max-w-4xl mx-auto px-6\">\n        <h1\n          ref={titleRef}\n          className=\"text-6xl md:text-8xl font-bold text-white mb-6 drop-shadow-lg\"\n        >\n          Awesome GSAP\n        </h1>\n        <p\n          ref={subtitleRef}\n          className=\"text-xl md:text-2xl text-white text-opacity-90 mb-8\"\n        >\n          React + Next.js Examples\n        </p>\n\n        {/* Animated scroll indicator */}\n        <div className=\"absolute bottom-10 left-1/2 transform -translate-x-1/2\">\n          <div className=\"w-6 h-10 border-2 border-white border-opacity-50 rounded-full flex justify-center\">\n            <div className=\"w-1 h-3 bg-white bg-opacity-70 rounded-full mt-2 animate-bounce\"></div>\n          </div>\n        </div>\n      </div>\n    </section>\n  );\n};\n\nexport default Hero;\n",
+    "params": {
+      "ease": [
+        "back.out(1.7)",
+        "power2.out",
+        "sine.inOut"
+      ],
+      "duration": [
+        1.5,
+        1,
+        4,
+        3.5,
+        5,
+        3,
+        4.5,
+        3.8,
+        2
+      ],
+      "stagger": null,
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-HoverInteractions",
+    "technique": "hoverinteractions",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/HoverInteractions/index.tsx",
+    "code": "\"use client\";\n\nimport { useRef } from \"react\";\nimport { gsap } from \"gsap\";\n\nexport default function HoverInteractions() {\n  const hoverBoxRef = useRef<HTMLDivElement>(null);\n  const clickBoxRef = useRef<HTMLDivElement>(null);\n\n  const handleHoverEnter = () => {\n    if (hoverBoxRef.current) {\n      gsap.to(hoverBoxRef.current, {\n        scale: 1.2,\n        rotation: 15,\n        backgroundColor: \"#ff6b6b\",\n        duration: 0.3,\n        ease: \"back.out(1.7)\",\n      });\n    }\n  };\n\n  const handleHoverLeave = () => {\n    if (hoverBoxRef.current) {\n      gsap.to(hoverBoxRef.current, {\n        scale: 1,\n        rotation: 0,\n        backgroundColor: \"#4ecdc4\",\n        duration: 0.3,\n        ease: \"power2.out\",\n      });\n    }\n  };\n\n  const handleClick = () => {\n    if (clickBoxRef.current) {\n      gsap.to(clickBoxRef.current, {\n        scale: 0.8,\n        duration: 0.1,\n        ease: \"power2.out\",\n        yoyo: true,\n        repeat: 1,\n        onComplete: () => {\n          gsap.to(clickBoxRef.current, {\n            rotation: \"+=360\",\n            backgroundColor: \"#00ff88\",\n            duration: 0.6,\n            ease: \"power2.out\",\n            onComplete: () => {\n              gsap.to(clickBoxRef.current, {\n                backgroundColor: \"#4ecdc4\",\n                duration: 0.3,\n                delay: 0.2,\n              });\n            },\n          });\n        },\n      });\n    }\n  };\n\n  const runAnimation = () => {\n    // Demo both interactions\n    handleHoverEnter();\n    setTimeout(() => {\n      handleHoverLeave();\n      setTimeout(() => {\n        handleClick();\n      }, 500);\n    }, 1000);\n  };\n\n  return (\n    <div className=\"flex gap-6 justify-center items-center\">\n      <div\n        ref={hoverBoxRef}\n        className=\"w-24 h-24 bg-teal-400 rounded-lg flex items-center justify-center text-gray-800 font-bold cursor-pointer select-none shadow-lg\"\n        onMouseEnter={handleHoverEnter}\n        onMouseLeave={handleHoverLeave}\n        onClick={runAnimation}\n      >\n        Hover Me\n      </div>\n      <div\n        ref={clickBoxRef}\n        className=\"w-24 h-24 bg-teal-400 rounded-lg flex items-center justify-center text-gray-800 font-bold cursor-pointer select-none shadow-lg hover:scale-105 transition-transform\"\n        onClick={handleClick}\n      >\n        Click Me\n      </div>\n    </div>\n  );\n}\n",
+    "params": {
+      "ease": [
+        "back.out(1.7)",
+        "power2.out"
+      ],
+      "duration": [
+        0.3,
+        0.3,
+        0.1,
+        0.6,
+        0.3
+      ],
+      "stagger": null,
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-InteractiveAnimations",
+    "technique": "interactiveanimations",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/InteractiveAnimations/index.tsx",
+    "code": "\"use client\";\n\nimport { useRef, useState } from \"react\";\nimport { gsap } from \"gsap\";\n\nconst InteractiveAnimations = () => {\n  const hoverBox1Ref = useRef<HTMLDivElement>(null);\n  const hoverBox2Ref = useRef<HTMLDivElement>(null);\n  const mouseAreaRef = useRef<HTMLDivElement>(null);\n  const followerRef = useRef<HTMLDivElement>(null);\n  const [trails, setTrails] = useState<\n    Array<{ id: number; x: number; y: number }>\n  >([]);\n  const trailIdRef = useRef(0);\n\n  const handleHoverEnter1 = () => {\n    if (hoverBox1Ref.current) {\n      gsap.to(hoverBox1Ref.current, {\n        scale: 1.2,\n        rotation: 15,\n        backgroundColor: \"#EF4444\",\n        duration: 0.3,\n        ease: \"back.out(1.7)\",\n      });\n    }\n  };\n\n  const handleHoverLeave1 = () => {\n    if (hoverBox1Ref.current) {\n      gsap.to(hoverBox1Ref.current, {\n        scale: 1,\n        rotation: 0,\n        backgroundColor: \"#06B6D4\",\n        duration: 0.3,\n        ease: \"power2.out\",\n      });\n    }\n  };\n\n  const handleClick2 = () => {\n    if (hoverBox2Ref.current) {\n      gsap.to(hoverBox2Ref.current, {\n        scale: 0.8,\n        duration: 0.1,\n        ease: \"power2.out\",\n        yoyo: true,\n        repeat: 1,\n        onComplete: () => {\n          gsap.to(hoverBox2Ref.current, {\n            rotation: \"+=360\",\n            duration: 0.5,\n            ease: \"power2.out\",\n          });\n        },\n      });\n    }\n  };\n\n  const handleHoverEnter2 = () => {\n    if (hoverBox2Ref.current) {\n      gsap.to(hoverBox2Ref.current, {\n        scale: 1.1,\n        duration: 0.3,\n        ease: \"power2.out\",\n      });\n    }\n  };\n\n  const handleHoverLeave2 = () => {\n    if (hoverBox2Ref.current) {\n      gsap.to(hoverBox2Ref.current, {\n        scale: 1,\n        duration: 0.3,\n        ease: \"power2.out\",\n      });\n    }\n  };\n\n  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {\n    if (mouseAreaRef.current && followerRef.current) {\n      const rect = mouseAreaRef.current.getBoundingClientRect();\n      const x = e.clientX - rect.left;\n      const y = e.clientY - rect.top;\n\n      gsap.to(followerRef.current, {\n        x: x - 10,\n        y: y - 10,\n        duration: 0.3,\n        ease: \"power2.out\",\n      });\n\n      // Create trail effect\n      const newTrail = { id: ++trailIdRef.current, x, y };\n      setTrails((prev) => [...prev.slice(-10), newTrail]);\n\n      // Remove trail after animation\n      setTimeout(() => {\n        setTrails((prev) => prev.filter((trail) => trail.id !== newTrail.id));\n      }, 1000);\n    }\n  };\n\n  const handleMouseEnterArea = () => {\n    if (followerRef.current) {\n      gsap.to(followerRef.current, {\n        scale: 1,\n        opacity: 1,\n        duration: 0.3,\n        ease: \"power2.out\",\n      });\n    }\n  };\n\n  const handleMouseLeaveArea = () => {\n    if (followerRef.current) {\n      gsap.to(followerRef.current, {\n        scale: 0,\n        opacity: 0,\n        duration: 0.3,\n        ease: \"power2.out\",\n      });\n    }\n  };\n\n  return (\n    <section id=\"interactive\" className=\"py-20 min-h-screen\">\n      <div className=\"max-w-6xl mx-auto px-6\">\n        <h2 className=\"text-4xl font-bold text-white text-center mb-16\">\n          Interactive Animations\n        </h2>\n\n        {/* Hover Effects */}\n        <div className=\"mb-16 bg-white bg-opacity-10 rounded-2xl p-8 backdrop-blur-sm\">\n          <h3 className=\"text-2xl font-semibold text-white mb-6\">\n            Hover Effects\n          </h3>\n          <div className=\"flex justify-center items-center gap-8 mb-8 min-h-[200px] bg-black bg-opacity-20 rounded-xl p-8\">\n            <div\n              ref={hoverBox1Ref}\n              onMouseEnter={handleHoverEnter1}\n              onMouseLeave={handleHoverLeave1}\n              className=\"w-24 h-24 bg-cyan-400 rounded-xl flex items-center justify-center text-black font-bold cursor-pointer select-none\"\n            >\n              Hover Me\n            </div>\n            <div\n              ref={hoverBox2Ref}\n              onClick={handleClick2}\n              onMouseEnter={handleHoverEnter2}\n              onMouseLeave={handleHoverLeave2}\n              className=\"w-24 h-24 bg-cyan-400 rounded-xl flex items-center justify-center text-black font-bold cursor-pointer select-none\"\n            >\n              Click Me\n            </div>\n          </div>\n        </div>\n\n        {/* Mouse Follow */}\n        <div className=\"bg-white bg-opacity-10 rounded-2xl p-8 backdrop-blur-sm\">\n          <h3 className=\"text-2xl font-semibold text-white mb-6\">\n            Mouse Follow\n          </h3>\n          <div\n            ref={mouseAreaRef}\n            onMouseMove={handleMouseMove}\n            onMouseEnter={handleMouseEnterArea}\n            onMouseLeave={handleMouseLeaveArea}\n            className=\"relative min-h-[300px] bg-black bg-opacity-20 rounded-xl p-8 cursor-none overflow-hidden\"\n          >\n            {/* Follower */}\n            <div\n              ref={followerRef}\n              className=\"absolute w-5 h-5 bg-green-400 rounded-full pointer-events-none z-10\"\n              style={{ scale: 0, opacity: 0 }}\n            />\n\n            {/* Trail dots */}\n            {trails.map((trail) => (\n              <div\n                key={trail.id}\n                className=\"absolute w-1 h-1 bg-green-400 rounded-full pointer-events-none animate-ping\"\n                style={{\n                  left: trail.x - 2,\n                  top: trail.y - 2,\n                }}\n              />\n            ))}\n\n            <p className=\"text-white text-center mt-32 pointer-events-none\">\n              Move your mouse in this area\n            </p>\n          </div>\n        </div>\n      </div>\n    </section>\n  );\n};\n\nexport default InteractiveAnimations;\n",
+    "params": {
+      "ease": [
+        "back.out(1.7)",
+        "power2.out"
+      ],
+      "duration": [
+        0.3,
+        0.3,
+        0.1,
+        0.5,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3
+      ],
+      "stagger": null,
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-LoadingAnimations",
+    "technique": "loadinganimations",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/LoadingAnimations/index.tsx",
+    "code": "\"use client\";\n\nimport { useRef } from \"react\";\nimport { gsap } from \"gsap\";\n\nexport default function LoadingAnimations() {\n  const dotsRef = useRef<(HTMLDivElement | null)[]>([]);\n\n  const runAnimation = () => {\n    const dots = dotsRef.current.filter(Boolean);\n\n    // Reset dots\n    gsap.set(dots, {\n      scale: 1,\n      backgroundColor: \"#00ff88\",\n    });\n\n    // Pulsing animation\n    gsap.to(dots, {\n      scale: 1.5,\n      backgroundColor: \"#ff6b6b\",\n      duration: 0.6,\n      ease: \"power2.inOut\",\n      stagger: 0.2,\n      repeat: 3,\n      yoyo: true,\n      onComplete: () => {\n        gsap.set(dots, {\n          scale: 1,\n          backgroundColor: \"#00ff88\",\n        });\n      },\n    });\n  };\n\n  return (\n    <div className=\"flex justify-center items-center min-h-[100px]\">\n      <div className=\"flex gap-3 cursor-pointer\" onClick={runAnimation}>\n        {[0, 1, 2].map((index) => (\n          <div\n            key={index}\n            ref={(el) => {\n              dotsRef.current[index] = el;\n            }}\n            className=\"w-5 h-5 bg-green-400 rounded-full shadow-lg\"\n            style={{\n              boxShadow: \"0 4px 15px rgba(0, 255, 136, 0.3)\",\n            }}\n          />\n        ))}\n      </div>\n    </div>\n  );\n}\n",
+    "params": {
+      "ease": [
+        "power2.inOut"
+      ],
+      "duration": [
+        0.6
+      ],
+      "stagger": [
+        0.2
+      ],
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-MouseFollow",
+    "technique": "mousefollow",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/MouseFollow/index.tsx",
+    "code": "\"use client\";\n\nimport { useRef, useState } from \"react\";\nimport { gsap } from \"gsap\";\n\nexport default function MouseFollow() {\n  const areaRef = useRef<HTMLDivElement>(null);\n  const followerRef = useRef<HTMLDivElement>(null);\n  const [isActive, setIsActive] = useState(false);\n\n  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {\n    if (followerRef.current && areaRef.current) {\n      const rect = areaRef.current.getBoundingClientRect();\n      const x = e.clientX - rect.left;\n      const y = e.clientY - rect.top;\n\n      gsap.to(followerRef.current, {\n        x: x - 10,\n        y: y - 10,\n        duration: 0.3,\n        ease: \"power2.out\",\n      });\n    }\n  };\n\n  const handleMouseEnter = () => {\n    setIsActive(true);\n    if (followerRef.current) {\n      gsap.to(followerRef.current, {\n        scale: 1,\n        opacity: 1,\n        duration: 0.3,\n        ease: \"back.out(1.7)\",\n      });\n    }\n  };\n\n  const handleMouseLeave = () => {\n    setIsActive(false);\n    if (followerRef.current) {\n      gsap.to(followerRef.current, {\n        scale: 0,\n        opacity: 0,\n        duration: 0.3,\n        ease: \"power2.out\",\n      });\n    }\n  };\n\n  const runAnimation = () => {\n    if (followerRef.current && areaRef.current) {\n      // Demo animation - simulate mouse movement\n      const centerX = areaRef.current.offsetWidth / 2;\n      const centerY = areaRef.current.offsetHeight / 2;\n\n      // Show follower\n      gsap.set(followerRef.current, { scale: 1, opacity: 1 });\n\n      // Animate in a circle\n      const tl = gsap.timeline();\n\n      for (let i = 0; i <= 8; i++) {\n        const angle = (i / 8) * Math.PI * 2;\n        const x = centerX + Math.cos(angle) * 40 - 10;\n        const y = centerY + Math.sin(angle) * 40 - 10;\n\n        tl.to(followerRef.current, {\n          x,\n          y,\n          duration: 0.3,\n          ease: \"power2.out\",\n        });\n      }\n\n      // Hide follower\n      tl.to(followerRef.current, {\n        scale: 0,\n        opacity: 0,\n        duration: 0.3,\n        ease: \"power2.out\",\n      });\n    }\n  };\n\n  return (\n    <div\n      ref={areaRef}\n      className={`relative min-h-[150px] bg-black/20 rounded-xl flex items-center justify-center text-white/70 text-lg select-none ${\n        isActive ? \"cursor-none\" : \"cursor-pointer\"\n      }`}\n      onMouseMove={handleMouseMove}\n      onMouseEnter={handleMouseEnter}\n      onMouseLeave={handleMouseLeave}\n      onClick={runAnimation}\n    >\n      <div\n        ref={followerRef}\n        className=\"absolute w-5 h-5 bg-green-400 rounded-full pointer-events-none z-10 opacity-0 scale-0 shadow-lg\"\n        style={{ transform: \"translate(-50%, -50%)\" }}\n      />\n      <p>Move your mouse here</p>\n    </div>\n  );\n}\n",
+    "params": {
+      "ease": [
+        "power2.out",
+        "back.out(1.7)"
+      ],
+      "duration": [
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3
+      ],
+      "stagger": null,
+      "usesScrollTrigger": false,
+      "usesTimeline": true
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-Navigation",
+    "technique": "navigation",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/Navigation/index.tsx",
+    "code": "\"use client\";\n\nimport { useEffect, useRef } from \"react\";\nimport { gsap } from \"gsap\";\nimport { ScrollToPlugin } from \"gsap/ScrollToPlugin\";\n\n// Register GSAP plugins\nif (typeof window !== \"undefined\") {\n  gsap.registerPlugin(ScrollToPlugin);\n}\n\nconst Navigation = () => {\n  const navRef = useRef<HTMLElement>(null);\n  const titleRef = useRef<HTMLHeadingElement>(null);\n  const menuItemsRef = useRef<HTMLButtonElement[]>([]);\n  const mobileButtonRef = useRef<HTMLButtonElement>(null);\n  const lastScrollY = useRef(0);\n\n  useEffect(() => {\n    const handleScroll = () => {\n      const currentScrollY = window.scrollY;\n\n      // Determine navbar visibility based on scroll direction\n      const scrollingDown =\n        currentScrollY > lastScrollY.current && currentScrollY > 100;\n      const scrollingUp = currentScrollY < lastScrollY.current;\n\n      if (navRef.current) {\n        if (scrollingDown) {\n          // Hide navbar when scrolling down\n          gsap.to(navRef.current, {\n            y: \"-100%\",\n            duration: 0.3,\n            ease: \"power2.out\",\n          });\n        } else if (scrollingUp || currentScrollY <= 100) {\n          // Show navbar when scrolling up or at top\n          gsap.to(navRef.current, {\n            y: \"0%\",\n            duration: 0.3,\n            ease: \"power2.out\",\n          });\n        }\n      }\n\n      lastScrollY.current = currentScrollY;\n    };\n\n    window.addEventListener(\"scroll\", handleScroll);\n    return () => window.removeEventListener(\"scroll\", handleScroll);\n  }, []);\n\n  useEffect(() => {\n    // Initial animation\n    if (navRef.current) {\n      gsap.fromTo(\n        navRef.current,\n        { y: -100, opacity: 0 },\n        { y: 0, opacity: 1, duration: 1, ease: \"power2.out\", delay: 0.5 }\n      );\n    }\n  }, []);\n\n  const scrollToSection = (sectionId: string) => {\n    const element = document.getElementById(sectionId);\n    if (element) {\n      // Kill any existing scroll animations to prevent conflicts\n      gsap.killTweensOf(window);\n\n      gsap.to(window, {\n        duration: 1.0,\n        scrollTo: {\n          y: element,\n          offsetY: 80,\n        },\n        ease: \"power2.out\",\n      });\n    }\n  };\n\n  const navItems = [\n    { id: \"basic\", label: \"Basic\" },\n    { id: \"scroll\", label: \"ScrollTrigger\" },\n    { id: \"interactive\", label: \"Interactive\" },\n    { id: \"advanced\", label: \"Advanced\" },\n    { id: \"honor\", label: \"Honor\", isExternal: true, href: \"/honor\" },\n    { id: \"folio\", label: \"Folio\", isExternal: true, href: \"/folio\" },\n  ];\n\n  return (\n    <nav\n      ref={navRef}\n      className=\"fixed top-0 w-full z-50 transition-all duration-300\"\n      style={{\n        backgroundColor: \"rgba(255, 255, 255, 0.1)\",\n        backdropFilter: \"blur(5px)\",\n      }}\n    >\n      <div className=\"max-w-6xl mx-auto px-6 py-4\">\n        <div className=\"flex justify-between items-center\">\n          <h1\n            ref={titleRef}\n            className=\"text-2xl font-bold text-white cursor-pointer hover:text-green-400 transition-colors duration-200 active:scale-95 transform\"\n            onClick={() => scrollToSection(\"hero\")}\n          >\n            GSAP Examples\n          </h1>\n\n          <ul className=\"hidden md:flex space-x-8\">\n            {navItems.map((item, index) => (\n              <li key={item.id}>\n                {item.isExternal ? (\n                  <a\n                    href={item.href}\n                    className=\"text-white hover:text-green-400 transition-colors duration-200 font-medium cursor-pointer active:scale-95 transform\"\n                  >\n                    {item.label}\n                  </a>\n                ) : (\n                  <button\n                    ref={(el) => {\n                      if (el) menuItemsRef.current[index] = el;\n                    }}\n                    onClick={() => scrollToSection(item.id)}\n                    className=\"text-white hover:text-green-400 transition-colors duration-200 font-medium cursor-pointer active:scale-95 transform\"\n                  >\n                    {item.label}\n                  </button>\n                )}\n              </li>\n            ))}\n          </ul>\n\n          {/* Mobile menu button */}\n          <button\n            ref={mobileButtonRef}\n            className=\"md:hidden text-white cursor-pointer hover:text-green-400 transition-colors duration-200 active:scale-95 transform\"\n          >\n            <svg\n              className=\"w-6 h-6\"\n              fill=\"none\"\n              stroke=\"currentColor\"\n              viewBox=\"0 0 24 24\"\n            >\n              <path\n                strokeLinecap=\"round\"\n                strokeLinejoin=\"round\"\n                strokeWidth={2}\n                d=\"M4 6h16M4 12h16M4 18h16\"\n              />\n            </svg>\n          </button>\n        </div>\n      </div>\n    </nav>\n  );\n};\n\nexport default Navigation;\n",
+    "params": {
+      "ease": [
+        "power2.out"
+      ],
+      "duration": [
+        0.3,
+        0.3,
+        1,
+        1
+      ],
+      "stagger": null,
+      "usesScrollTrigger": true,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-ParallaxEffects",
+    "technique": "parallaxeffects",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/ParallaxEffects/index.tsx",
+    "code": "\"use client\";\n\nimport { useRef, useEffect } from \"react\";\nimport { gsap } from \"gsap\";\nimport { ScrollTrigger } from \"gsap/ScrollTrigger\";\n\nexport default function ParallaxEffects() {\n  const containerRef = useRef<HTMLDivElement>(null);\n  const bgRef = useRef<HTMLDivElement>(null);\n  const contentRef = useRef<HTMLDivElement>(null);\n\n  useEffect(() => {\n    gsap.registerPlugin(ScrollTrigger);\n\n    if (bgRef.current && contentRef.current && containerRef.current) {\n      // Parallax background animation\n      const bgAnimation = gsap.to(bgRef.current, {\n        yPercent: -50,\n        ease: \"none\",\n        scrollTrigger: {\n          trigger: containerRef.current,\n          start: \"top bottom\",\n          end: \"bottom top\",\n          scrub: true,\n        },\n      });\n\n      // Content fade in animation\n      const contentAnimation = gsap.fromTo(\n        contentRef.current,\n        {\n          y: 50,\n          opacity: 0,\n        },\n        {\n          y: 0,\n          opacity: 1,\n          duration: 1,\n          ease: \"power2.out\",\n          scrollTrigger: {\n            trigger: contentRef.current,\n            start: \"top 70%\",\n            toggleActions: \"play none none reverse\",\n          },\n        }\n      );\n\n      return () => {\n        bgAnimation.kill();\n        contentAnimation.kill();\n        ScrollTrigger.getAll().forEach((trigger) => {\n          if (trigger && typeof trigger.kill === \"function\") {\n            trigger.kill();\n          }\n        });\n      };\n    }\n  }, []);\n\n  const runAnimation = () => {\n    if (bgRef.current && contentRef.current) {\n      // Manual demo animation\n      const tl = gsap.timeline();\n\n      tl.to(bgRef.current, {\n        y: -20,\n        duration: 1,\n        ease: \"power2.out\",\n      })\n        .fromTo(\n          contentRef.current,\n          {\n            y: 30,\n            opacity: 0.5,\n          },\n          {\n            y: 0,\n            opacity: 1,\n            duration: 0.8,\n            ease: \"power2.out\",\n          },\n          \"-=0.5\"\n        )\n        .to([bgRef.current, contentRef.current], {\n          y: 0,\n          opacity: 1,\n          duration: 0.8,\n          ease: \"power2.out\",\n        });\n    }\n  };\n\n  return (\n    <div\n      ref={containerRef}\n      className=\"relative h-40 w-full overflow-hidden rounded-xl cursor-pointer\"\n      onClick={runAnimation}\n    >\n      <div\n        ref={bgRef}\n        className=\"absolute inset-0 bg-gradient-to-br from-red-400 to-blue-400 opacity-70 transform -translate-y-4\"\n      />\n      <div\n        ref={contentRef}\n        className=\"relative z-10 h-full flex flex-col items-center justify-center text-white text-center\"\n      >\n        <h4 className=\"text-xl font-bold mb-2\">Parallax Effect</h4>\n        <p className=\"text-sm\">Background moves differently</p>\n      </div>\n    </div>\n  );\n}\n",
+    "params": {
+      "ease": [
+        "none",
+        "power2.out"
+      ],
+      "duration": [
+        1,
+        1,
+        0.8,
+        0.8
+      ],
+      "stagger": null,
+      "usesScrollTrigger": true,
+      "usesTimeline": true
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-ScrollAnimations",
+    "technique": "scrollanimations",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/ScrollAnimations/index.tsx",
+    "code": "'use client'\n\nimport { useEffect, useRef } from 'react'\nimport { gsap } from 'gsap'\nimport { ScrollTrigger } from 'gsap/ScrollTrigger'\n\n// Register ScrollTrigger plugin\nif (typeof window !== 'undefined') {\n  gsap.registerPlugin(ScrollTrigger)\n}\n\nconst ScrollAnimations = () => {\n  const sectionRef = useRef<HTMLDivElement>(null)\n  const scrollBoxRef = useRef<HTMLDivElement>(null)\n  const parallaxBgRef = useRef<HTMLDivElement>(null)\n  const parallaxContentRef = useRef<HTMLDivElement>(null)\n  const cardsRef = useRef<HTMLDivElement[]>([])\n\n  const addToCardsRefs = (el: HTMLDivElement | null, index: number) => {\n    if (el) {\n      cardsRef.current[index] = el\n    }\n  }\n\n  useEffect(() => {\n    const ctx = gsap.context(() => {\n      // Scroll-triggered box animation\n      if (scrollBoxRef.current) {\n        gsap.fromTo(scrollBoxRef.current, {\n          scale: 0.5,\n          rotation: 0,\n          backgroundColor: '#EF4444'\n        }, {\n          scale: 1.2,\n          rotation: 360,\n          backgroundColor: '#10B981',\n          duration: 1,\n          ease: 'back.out(1.7)',\n          scrollTrigger: {\n            trigger: scrollBoxRef.current,\n            start: 'top 80%',\n            end: 'bottom 20%',\n            scrub: 1,\n            toggleActions: 'play none none reverse'\n          }\n        })\n      }\n\n      // Parallax background animation\n      if (parallaxBgRef.current) {\n        gsap.to(parallaxBgRef.current, {\n          yPercent: -50,\n          ease: 'none',\n          scrollTrigger: {\n            trigger: parallaxBgRef.current.parentElement,\n            start: 'top bottom',\n            end: 'bottom top',\n            scrub: true\n          }\n        })\n      }\n\n      // Parallax content animation\n      if (parallaxContentRef.current) {\n        gsap.fromTo(parallaxContentRef.current, {\n          y: 100,\n          opacity: 0\n        }, {\n          y: 0,\n          opacity: 1,\n          duration: 1,\n          ease: 'power2.out',\n          scrollTrigger: {\n            trigger: parallaxContentRef.current,\n            start: 'top 70%',\n            toggleActions: 'play none none reverse'\n          }\n        })\n      }\n\n      // Card reveal animations\n      cardsRef.current.forEach((card, index) => {\n        if (card) {\n          gsap.fromTo(card, {\n            y: 100,\n            opacity: 0,\n            scale: 0.8\n          }, {\n            y: 0,\n            opacity: 1,\n            scale: 1,\n            duration: 0.8,\n            ease: 'back.out(1.7)',\n            scrollTrigger: {\n              trigger: card,\n              start: 'top 80%',\n              toggleActions: 'play none none reverse'\n            },\n            delay: index * 0.2\n          })\n        }\n      })\n\n      // Section title animation\n      const sectionTitle = sectionRef.current?.querySelector('h2')\n      if (sectionTitle) {\n        gsap.fromTo(sectionTitle, {\n          y: 50,\n          opacity: 0\n        }, {\n          y: 0,\n          opacity: 1,\n          duration: 1,\n          ease: 'power2.out',\n          scrollTrigger: {\n            trigger: sectionTitle,\n            start: 'top 80%',\n            toggleActions: 'play none none reverse'\n          }\n        })\n      }\n    }, sectionRef)\n\n    return () => ctx.revert()\n  }, [])\n\n  return (\n    <section \n      id=\"scroll\" \n      ref={sectionRef}\n      className=\"py-20 min-h-screen bg-gradient-to-br from-purple-800 via-blue-800 to-purple-600\"\n    >\n      <div className=\"max-w-6xl mx-auto px-6\">\n        <h2 className=\"text-4xl font-bold text-white text-center mb-16\">\n          ScrollTrigger Animations\n        </h2>\n\n        {/* Scroll-triggered box */}\n        <div className=\"mb-16 bg-white bg-opacity-10 rounded-2xl p-8 backdrop-blur-sm\">\n          <h3 className=\"text-2xl font-semibold text-white mb-6\">Scroll to Animate</h3>\n          <div className=\"flex justify-center items-center min-h-[400px] bg-black bg-opacity-20 rounded-xl p-8\">\n            <div \n              ref={scrollBoxRef}\n              className=\"w-48 h-48 rounded-2xl flex items-center justify-center font-bold text-white text-xl\"\n              style={{ backgroundColor: '#EF4444' }}\n            >\n              Scroll to animate\n            </div>\n          </div>\n        </div>\n\n        {/* Parallax container */}\n        <div className=\"mb-16 relative h-96 overflow-hidden rounded-2xl\">\n          <div \n            ref={parallaxBgRef}\n            className=\"absolute inset-0 bg-gradient-to-r from-pink-500 to-yellow-500 opacity-30\"\n            style={{ height: '120%', top: '-10%' }}\n          />\n          <div \n            ref={parallaxContentRef}\n            className=\"relative z-10 h-full flex flex-col items-center justify-center text-center text-white\"\n          >\n            <h3 className=\"text-3xl font-bold mb-4\">Parallax Effect</h3>\n            <p className=\"text-lg\">This background moves at a different speed</p>\n          </div>\n        </div>\n\n        {/* Reveal cards */}\n        <div className=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6\">\n          {[1, 2, 3, 4].map((num, index) => (\n            <div\n              key={num}\n              ref={(el) => addToCardsRefs(el, index)}\n              className=\"h-48 bg-white bg-opacity-10 rounded-2xl flex items-center justify-center text-white text-2xl font-bold backdrop-blur-sm hover:scale-105 transition-transform cursor-pointer\"\n            >\n              Card {num}\n            </div>\n          ))}\n        </div>\n      </div>\n    </section>\n  )\n}\n\nexport default ScrollAnimations\n",
+    "params": {
+      "ease": [
+        "back.out(1.7)",
+        "none",
+        "power2.out"
+      ],
+      "duration": [
+        1,
+        1,
+        0.8,
+        1
+      ],
+      "stagger": null,
+      "usesScrollTrigger": true,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-ScrollProgress",
+    "technique": "scrollprogress",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/ScrollProgress/index.tsx",
+    "code": "/*\n * @Description:\n * @Author: Devin\n * @Date: 2025-07-14 11:58:36\n */\n\"use client\";\n\nimport { useEffect, useRef } from \"react\";\nimport { gsap } from \"gsap\";\n\nconst ScrollProgress = () => {\n  const progressRef = useRef<HTMLDivElement>(null);\n\n  useEffect(() => {\n    const handleScroll = () => {\n      const currentScrollY = window.scrollY;\n      const documentHeight =\n        document.documentElement.scrollHeight - window.innerHeight;\n      const progress = Math.min((currentScrollY / documentHeight) * 100, 100);\n\n      // Update progress bar with GSAP\n      if (progressRef.current) {\n        gsap.to(progressRef.current, {\n          width: `${progress}%`,\n          duration: 0.1,\n          ease: \"none\",\n        });\n      }\n    };\n\n    // Initial call\n    handleScroll();\n\n    window.addEventListener(\"scroll\", handleScroll, { passive: true });\n    return () => window.removeEventListener(\"scroll\", handleScroll);\n  }, []);\n\n  return (\n    <div className=\"fixed top-0 left-0 w-full h-1 bg-transparent z-[100]\">\n      <div\n        ref={progressRef}\n        className=\"h-full bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 shadow-lg\"\n        style={{ width: \"0%\" }}\n      />\n    </div>\n  );\n};\n\nexport default ScrollProgress;\n",
+    "params": {
+      "ease": [
+        "none"
+      ],
+      "duration": [
+        0.1
+      ],
+      "stagger": null,
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-ScrollTrigger",
+    "technique": "scrolltrigger",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/ScrollTrigger/index.tsx",
+    "code": "\"use client\";\n\nimport { useRef, useEffect } from \"react\";\nimport { gsap } from \"gsap\";\nimport { ScrollTrigger } from \"gsap/ScrollTrigger\";\n\nexport default function ScrollTriggerModule() {\n  const scrollBoxRef = useRef<HTMLDivElement>(null);\n  const triggerRef = useRef<HTMLDivElement>(null);\n\n  useEffect(() => {\n    gsap.registerPlugin(ScrollTrigger);\n\n    if (scrollBoxRef.current && triggerRef.current) {\n      const animation = gsap.fromTo(\n        scrollBoxRef.current,\n        {\n          scale: 0.5,\n          rotation: 0,\n          backgroundColor: \"#ff6b6b\",\n        },\n        {\n          scale: 1.2,\n          rotation: 360,\n          backgroundColor: \"#00ff88\",\n          duration: 1,\n          ease: \"back.out(1.7)\",\n          scrollTrigger: {\n            trigger: triggerRef.current,\n            start: \"top 80%\",\n            end: \"bottom 20%\",\n            scrub: 1,\n            toggleActions: \"play none none reverse\",\n          },\n        }\n      );\n\n      return () => {\n        animation.kill();\n        ScrollTrigger.getAll().forEach((trigger) => {\n          if (trigger && typeof trigger.kill === \"function\") {\n            trigger.kill();\n          }\n        });\n      };\n    }\n  }, []);\n\n  const runAnimation = () => {\n    if (scrollBoxRef.current) {\n      // Manual trigger animation for demo\n      gsap.fromTo(\n        scrollBoxRef.current,\n        {\n          scale: 0.5,\n          rotation: 0,\n          backgroundColor: \"#ff6b6b\",\n        },\n        {\n          scale: 1.2,\n          rotation: 360,\n          backgroundColor: \"#00ff88\",\n          duration: 1,\n          ease: \"back.out(1.7)\",\n          yoyo: true,\n          repeat: 1,\n        }\n      );\n    }\n  };\n\n  return (\n    <div\n      ref={triggerRef}\n      className=\"flex justify-center items-center min-h-[150px]\"\n    >\n      <div\n        ref={scrollBoxRef}\n        className=\"w-32 h-32 bg-red-400 rounded-2xl flex items-center justify-center text-white font-bold transition-colors cursor-pointer\"\n        onClick={runAnimation}\n      >\n        Scroll to animate\n      </div>\n    </div>\n  );\n}\n",
+    "params": {
+      "ease": [
+        "back.out(1.7)"
+      ],
+      "duration": [
+        1,
+        1
+      ],
+      "stagger": null,
+      "usesScrollTrigger": true,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-ShapeMorphing",
+    "technique": "shapemorphing",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/ShapeMorphing/index.tsx",
+    "code": "\"use client\";\n\nimport { useRef } from \"react\";\nimport { gsap } from \"gsap\";\n\nexport default function ShapeMorphing() {\n  const morphShapeRef = useRef<SVGPathElement>(null);\n\n  const runAnimation = () => {\n    if (morphShapeRef.current) {\n      const shapes = [\n        \"M100,50 L150,150 L50,150 Z\", // Triangle\n        \"M50,100 Q100,50 150,100 Q100,150 50,100\", // Diamond-like\n        \"M100,50 A50,50 0 1,1 100,150 A50,50 0 1,1 100,50\", // Circle\n        \"M50,75 L150,75 L150,125 L50,125 Z\", // Rectangle\n        \"M100,50 L150,150 L50,150 Z\", // Back to triangle\n      ];\n\n      const colors = [\"#00ff88\", \"#ff6b6b\", \"#4ecdc4\", \"#8B5CF6\", \"#00ff88\"];\n\n      const tl = gsap.timeline();\n\n      shapes.forEach((shape, index) => {\n        tl.to(\n          morphShapeRef.current,\n          {\n            attr: { d: shape },\n            fill: colors[index],\n            duration: 1,\n            ease: \"power2.inOut\",\n          },\n          index * 1.2\n        );\n      });\n    }\n  };\n\n  return (\n    <div className=\"flex justify-center items-center p-4\">\n      <svg\n        width=\"200\"\n        height=\"200\"\n        viewBox=\"0 0 200 200\"\n        className=\"cursor-pointer\"\n        onClick={runAnimation}\n      >\n        <path\n          ref={morphShapeRef}\n          className=\"morph-shape\"\n          d=\"M100,50 L150,150 L50,150 Z\"\n          fill=\"#00ff88\"\n          style={{\n            filter: \"drop-shadow(0 4px 15px rgba(0, 255, 136, 0.3))\",\n            transformOrigin: \"center\",\n          }}\n        />\n      </svg>\n    </div>\n  );\n}\n",
+    "params": {
+      "ease": [
+        "power2.inOut"
+      ],
+      "duration": [
+        1
+      ],
+      "stagger": null,
+      "usesScrollTrigger": false,
+      "usesTimeline": true
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-SvgPath",
+    "technique": "svgpath",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/SvgPath/index.tsx",
+    "code": "\"use client\";\n\nimport { useRef } from \"react\";\nimport { gsap } from \"gsap\";\nimport { MotionPathPlugin } from \"gsap/MotionPathPlugin\";\n\nexport default function SvgPath() {\n  const pathFollowerRef = useRef<SVGCircleElement>(null);\n  const motionPathRef = useRef<SVGPathElement>(null);\n\n  const runAnimation = () => {\n    if (pathFollowerRef.current && motionPathRef.current) {\n      // Check if MotionPathPlugin is available\n      if (typeof MotionPathPlugin !== \"undefined\") {\n        gsap.registerPlugin(MotionPathPlugin);\n\n        // Reset position\n        gsap.set(pathFollowerRef.current, {\n          motionPath: { path: motionPathRef.current, start: 0 },\n        });\n\n        // Animate along path\n        gsap.to(pathFollowerRef.current, {\n          motionPath: {\n            path: motionPathRef.current,\n            align: motionPathRef.current,\n            alignOrigin: [0.5, 0.5],\n            autoRotate: true,\n          },\n          duration: 3,\n          ease: \"power2.inOut\",\n          repeat: 1,\n          yoyo: true,\n        });\n\n        // Add scale animation\n        gsap.to(pathFollowerRef.current, {\n          scale: 1.5,\n          duration: 1.5,\n          ease: \"sine.inOut\",\n          repeat: 1,\n          yoyo: true,\n        });\n      } else {\n        // Fallback animation without MotionPathPlugin\n        gsap.to(pathFollowerRef.current, {\n          rotation: 360,\n          transformOrigin: \"150px 100px\",\n          duration: 3,\n          ease: \"power2.inOut\",\n          repeat: 1,\n          yoyo: true,\n        });\n\n        gsap.to(pathFollowerRef.current, {\n          scale: 1.5,\n          duration: 1.5,\n          ease: \"sine.inOut\",\n          repeat: 1,\n          yoyo: true,\n        });\n      }\n    }\n  };\n\n  return (\n    <div className=\"flex justify-center items-center p-4\">\n      <svg\n        width=\"300\"\n        height=\"200\"\n        viewBox=\"0 0 300 200\"\n        className=\"cursor-pointer\"\n        onClick={runAnimation}\n      >\n        <path\n          ref={motionPathRef}\n          className=\"motion-path\"\n          d=\"M50,100 Q150,50 250,100\"\n          stroke=\"#00ff88\"\n          strokeWidth=\"2\"\n          fill=\"none\"\n          strokeDasharray=\"5,5\"\n        >\n          <animate\n            attributeName=\"stroke-dashoffset\"\n            values=\"0;-10\"\n            dur=\"2s\"\n            repeatCount=\"indefinite\"\n          />\n        </path>\n        <circle\n          ref={pathFollowerRef}\n          className=\"path-follower\"\n          r=\"8\"\n          fill=\"#ff6b6b\"\n          style={{ filter: \"drop-shadow(0 0 10px rgba(255, 107, 107, 0.5))\" }}\n        />\n      </svg>\n    </div>\n  );\n}\n",
+    "params": {
+      "ease": [
+        "power2.inOut",
+        "sine.inOut"
+      ],
+      "duration": [
+        3,
+        1.5,
+        3,
+        1.5
+      ],
+      "stagger": null,
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-TextAnimations",
+    "technique": "textanimations",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/TextAnimations/index.tsx",
+    "code": "\"use client\";\n\nimport { useRef, useState } from \"react\";\nimport { gsap } from \"gsap\";\n\nexport default function TextAnimations() {\n  const textRef = useRef<HTMLHeadingElement>(null);\n  const [isAnimating, setIsAnimating] = useState(false);\n\n  const runAnimation = () => {\n    if (isAnimating || !textRef.current) return;\n\n    setIsAnimating(true);\n    const text = \"Hello GSAP World!\";\n    const chars = text.split(\"\");\n\n    textRef.current.innerHTML = chars\n      .map((char) =>\n        char === \" \" ? \"&nbsp;\" : `<span class=\"inline-block\">${char}</span>`\n      )\n      .join(\"\");\n\n    const charElements = textRef.current.querySelectorAll(\"span\");\n\n    gsap.fromTo(\n      charElements,\n      {\n        opacity: 0,\n        y: 50,\n        rotation: 180,\n        scale: 0,\n      },\n      {\n        opacity: 1,\n        y: 0,\n        rotation: 0,\n        scale: 1,\n        duration: 0.8,\n        ease: \"back.out(1.7)\",\n        stagger: 0.05,\n        onComplete: () => {\n          // Color wave animation\n          gsap.to(charElements, {\n            color: \"#00ff88\",\n            duration: 0.3,\n            stagger: 0.05,\n            yoyo: true,\n            repeat: 1,\n            onComplete: () => {\n              // Bounce effect\n              gsap.to(charElements, {\n                y: -10,\n                duration: 0.2,\n                stagger: 0.03,\n                yoyo: true,\n                repeat: 1,\n                ease: \"power2.out\",\n                onComplete: () => setIsAnimating(false),\n              });\n            },\n          });\n        },\n      }\n    );\n  };\n\n  return (\n    <div className=\"text-center\">\n      <h2\n        ref={textRef}\n        className={`text-4xl font-bold text-white cursor-pointer transition-colors ${\n          isAnimating ? \"pointer-events-none\" : \"hover:text-green-400\"\n        }`}\n        onClick={runAnimation}\n      >\n        Hello GSAP World!\n      </h2>\n    </div>\n  );\n}\n",
+    "params": {
+      "ease": [
+        "back.out(1.7)",
+        "power2.out"
+      ],
+      "duration": [
+        0.8,
+        0.3,
+        0.2
+      ],
+      "stagger": [
+        0.05,
+        0.05,
+        0.03
+      ],
+      "usesScrollTrigger": false,
+      "usesTimeline": false
+    },
+    "mood": null,
+    "description": null
+  },
+  {
+    "id": "react-TimelineSequences",
+    "technique": "timelinesequences",
+    "framework": "react",
+    "sourceFile": "awesome-gsap/react/src/components/TimelineSequences/index.tsx",
+    "code": "/*\n * @Description:\n * @Author: Devin\n * @Date: 2025-07-14 10:43:37\n */\n\"use client\";\n\nimport { useRef } from \"react\";\nimport { gsap } from \"gsap\";\n\nexport default function TimelineSequences() {\n  const box1Ref = useRef<HTMLDivElement>(null);\n  const box2Ref = useRef<HTMLDivElement>(null);\n  const box3Ref = useRef<HTMLDivElement>(null);\n  const box4Ref = useRef<HTMLDivElement>(null);\n\n  const runAnimation = () => {\n    const boxes = [\n      box1Ref.current,\n      box2Ref.current,\n      box3Ref.current,\n      box4Ref.current,\n    ];\n    const tl = gsap.timeline();\n\n    // Reset positions\n    gsap.set(boxes, { scale: 1, rotation: 0, y: 0, opacity: 1 });\n\n    tl.from(box1Ref.current, {\n      scale: 0,\n      rotation: 180,\n      duration: 0.5,\n      ease: \"back.out(1.7)\",\n    })\n      .from(\n        box2Ref.current,\n        {\n          y: -100,\n          opacity: 0,\n          duration: 0.5,\n          ease: \"bounce.out\",\n        },\n        \"-=0.3\"\n      )\n      .from(\n        box3Ref.current,\n        {\n          scale: 0,\n          rotation: -180,\n          duration: 0.5,\n          ease: \"back.out(1.7)\",\n        },\n        \"-=0.3\"\n      )\n      .from(\n        box4Ref.current,\n        {\n          y: 100,\n          opacity: 0,\n          duration: 0.5,\n          ease: \"bounce.out\",\n        },\n        \"-=0.3\"\n      )\n      .to(\n        boxes,\n        {\n          rotation: 360,\n          duration: 1,\n          ease: \"power2.inOut\",\n          stagger: 0.1,\n        },\n        \"+=0.5\"\n      );\n  };\n\n  return (\n    <div\n      className=\"flex gap-4 justify-center items-center cursor-pointer\"\n      onClick={runAnimation}\n    >\n      {[1, 2, 3, 4].map((num, index) => (\n        <div\n          key={num}\n          ref={[box1Ref, box2Ref, box3Ref, box4Ref][index]}\n          className=\"w-20 h-20 bg-red-400 rounded-lg flex items-center justify-center text-white font-bold text-2xl transition-colors\"\n        >\n          {num}\n        </div>\n      ))}\n    </div>\n  );\n}\n",
+    "params": {
+      "ease": [
+        "back.out(1.7)",
+        "bounce.out",
+        "power2.inOut"
+      ],
+      "duration": [
+        0.5,
+        0.5,
+        0.5,
+        0.5,
+        1
+      ],
+      "stagger": [
+        0.1
+      ],
+      "usesScrollTrigger": false,
+      "usesTimeline": true
+    },
+    "mood": null,
+    "description": null
+  }
+]

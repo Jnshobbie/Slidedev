@@ -7,6 +7,8 @@ import { getPromptForProjectType, GPT52_CODE_AGENT_PROMPT, FRAGMENT_TITLE_PROMPT
 import { SANDBOX_TIMEOUT } from "@/inngest/types";
 import type { FigmaImportResult } from "@/lib/figma/types";
 import Anthropic from "@anthropic-ai/sdk";
+import { searchAnimationPatterns, pickMoodForProject, type Mood } from "@/lib/gsap-patterns";
+import { GSAP_MODE_PROMPT } from "@/prompt";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -16,6 +18,7 @@ interface GenerateCodePayload {
   model?: string;
   attachments?: Array<{ url: string; type: string; name: string; size: number }>;
   figmaData?: FigmaImportResult;
+  gsapMode?: boolean;
   smartDesignData?: { fileName: string; nodes: Record<string, unknown> | object[]; imageUrls: Record<string, string>; sectionImages?: Record<string, string> };
 }
 
@@ -37,12 +40,15 @@ export const generateCode = task({
     // 1. Get project type
     const project = await prisma.project.findUnique({
       where: { id: projectId },
-      select: { projectType: true, model: true },
+      select: { projectType: true, model: true, gsapMode: true },
     });
 
     const selectedModel = payload.model || project?.model || "gpt-5.2";
     const projectType = (project?.projectType as "web" | "mobile") || "web";
     const isMobile = projectType === "mobile";
+
+    const gsapEnabled = payload.gsapMode ?? project?.gsapMode ?? false;
+    const projectMood = gsapEnabled ? pickMoodForProject(projectId) : undefined;
 
     console.log(`🎯 Project type: ${projectType}`);
 
@@ -165,7 +171,8 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
     // Smart Export context
 
 
-    const systemPrompt = getPromptForProjectType(projectType) + "\n\n" + GPT52_CODE_AGENT_PROMPT;
+    const systemPrompt = getPromptForProjectType(projectType) + "\n\n" + GPT52_CODE_AGENT_PROMPT
+      + (gsapEnabled ? "\n\n" + GSAP_MODE_PROMPT : "");
     const currentFiles: Record<string, string> = {};
 
     // 6. Define tools
@@ -246,6 +253,24 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
         }
       }
     ];
+
+    if (gsapEnabled) {
+      tools.push({
+        type: 'function' as const,
+        function: {
+          name: 'searchAnimationPatterns',
+          description: 'Search the GSAP animation pattern library for reference techniques before writing animation code',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: { type: 'string', description: 'Short description of the animation effect needed' },
+              mood: { type: 'string' },
+            },
+            required: ['query'],
+          },
+        },
+      });
+    }
 
     // 7. GPT-5.2 DIRECT LOOP (no helper, all inline)
     const messages: ChatCompletionMessageParam[] = [
@@ -349,6 +374,18 @@ ${Object.keys(figmaData.components).map((name) => `- ${name}`).join("\n")}
         },
       },
     ];
+
+    if (gsapEnabled) {
+      claudeTools.push({
+        name: "searchAnimationPatterns",
+        description: "Search the GSAP animation pattern library for reference techniques before writing animation code",
+        input_schema: {
+          type: "object" as const,
+          properties: { query: { type: "string" }, mood: { type: "string" } },
+          required: ["query"],
+        },
+      });
+    }
 
     // Inject imageUrls directly into node tree before sending to AI
     function injectImageUrls(n: Record<string, unknown>, urlMap: Record<string, string>): Record<string, unknown> {
@@ -692,6 +729,10 @@ Use createOrUpdateFiles with path "app/page.tsx" and that exact content above.
                 contents.push({ path: filePath, content });
               }
               toolResult = JSON.stringify(contents);
+            } else if (name === "searchAnimationPatterns") {
+              const { query, mood } = input as { query: string; mood?: string };
+              const results = await searchAnimationPatterns(query, { mood: (mood as Mood | undefined) ?? projectMood });
+              toolResult = JSON.stringify(results);
             }
 
             toolResults.push({
@@ -793,6 +834,9 @@ Use createOrUpdateFiles with path "app/page.tsx" and that exact content above.
                 contents.push({ path: filePath, content });
               }
               toolResult = JSON.stringify(contents);
+            } else if (functionName === 'searchAnimationPatterns') {
+              const results = await searchAnimationPatterns(functionArgs.query, { mood: functionArgs.mood ?? projectMood });
+              toolResult = JSON.stringify(results);
             }
 
             // Push tool result

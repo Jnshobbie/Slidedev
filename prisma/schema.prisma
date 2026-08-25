@@ -5,13 +5,15 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 model Project {
@@ -20,6 +22,7 @@ model Project {
   userId String
   projectType String @default("web") // "web" or "mobile"
   model       String @default("gpt-5.2") // model switcher
+  gsapMode    Boolean @default(false) // GSAP Motion mode toggle
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -130,4 +133,22 @@ model FigmaImport {
   sectionImages String @db.Text @default("{}")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+// GSAP Mode: retrieval library of tagged animation patterns.
+// Populated once by scripts/gsap-ingest/*.js, read at generation time
+// by src/lib/gsap-patterns.ts.
+model GsapAnimationPattern {
+  id          String   @id @default(cuid())
+  technique   String   // e.g. "scroll-triggered card stagger reveal"
+  mood        String   // "minimal-snappy" | "bold-elastic" | "cinematic-slow" | "playful-bouncy" | "luxury-smooth"
+  framework   String   // "vanilla" | "react"
+  description String   @db.Text
+  code        String   @db.Text
+  params      Json?    // extracted ease/duration/stagger hints
+  embedding   Unsupported("vector(1024)")
+  createdAt   DateTime @default(now())
+
+  @@index([mood])
+  @@index([technique])
 }

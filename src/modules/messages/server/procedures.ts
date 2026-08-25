@@ -47,7 +47,8 @@ export const messagesRouter = createTRPCRouter({
         projectId: z.string().min(1, { message: "Project ID is required" }),
         projectType: z.enum(["web", "mobile"]).optional(), // NEW: Optional projectType (form selector)
         attachments: z.array(fileAttachmentSchema).optional(),
-        model: z.string().optional(), // NEW: Optional model field for message-level model selection
+        model: z.string().optional(), // NEW: Optional model field for message-level model selection 
+        gsapMode: z.boolean().optional(),
         importId: z.string().optional(),
         mode: z.string().optional(),
       }),
@@ -118,6 +119,7 @@ export const messagesRouter = createTRPCRouter({
       await generateCode.trigger({
         projectId: existingProject.id,
         model: existingProject.model,
+        gsapMode: input.gsapMode ?? existingProject.gsapMode,
         value: input.value,
         attachments: input.attachments,
         smartDesignData, // Pass the smart design data if available

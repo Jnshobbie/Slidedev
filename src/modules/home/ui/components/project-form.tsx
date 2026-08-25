@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import TextareaAutosize from "react-textarea-autosize";
-import { ArrowUpIcon, Loader2Icon, PlusIcon, XIcon, ImageIcon, VideoIcon, FileTextIcon } from "lucide-react";
+import { ArrowUpIcon, Loader2Icon, PlusIcon, XIcon, ImageIcon, VideoIcon, FileTextIcon, SparklesIcon } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useTRPC } from "@/trpc/client";
@@ -51,6 +51,7 @@ export const ProjectForm = () => {
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const [projectType, setProjectType] = useState<ProjectType>("web");
   const [model, setModel] = useState("gpt-5.2");
+  const [gsapMode, setGsapMode] = useState(false);
   const [smartImportId, setSmartImportId] = useState<string | null>(null);
   const [smartMode, setSmartMode] = useState(false);
   const [smartFileName, setSmartFileName] = useState<string | null>(null);
@@ -135,16 +136,16 @@ export const ProjectForm = () => {
 
     // Fallback: check localStorage if URL had no params (e.g. after login redirect)
     const urlParams2 = new URLSearchParams(window.location.search);
-const hasUrlImport = urlParams2.get('importId');
-if (!hasUrlImport) {
-  const savedImportId = localStorage.getItem('slidedev_smart_importId');
-  const savedFileName = localStorage.getItem('slidedev_smart_fileName');
-  if (savedImportId) {
-    setSmartImportId(savedImportId);
-    setSmartMode(true);
-    setSmartFileName(savedFileName);
-  }
-}
+    const hasUrlImport = urlParams2.get('importId');
+    if (!hasUrlImport) {
+      const savedImportId = localStorage.getItem('slidedev_smart_importId');
+      const savedFileName = localStorage.getItem('slidedev_smart_fileName');
+      if (savedImportId) {
+        setSmartImportId(savedImportId);
+        setSmartMode(true);
+        setSmartFileName(savedFileName);
+      }
+    }
 
     window.addEventListener('focus', handleFocus);
 
@@ -275,6 +276,7 @@ if (!hasUrlImport) {
       projectType,
       attachments: attachments.length > 0 ? attachments : undefined,
       model, // 
+      gsapMode,
       importId: smartImportId || undefined,
       mode: smartMode ? 'smart' : undefined,
     });
@@ -444,6 +446,22 @@ if (!hasUrlImport) {
 
 
               <ModelSelector value={model} onChange={setModel} disabled={isPending} isPro={isPro} />
+
+              <button
+                type="button"
+                onClick={() => setGsapMode((v) => !v)}
+                disabled={isPending}
+                title="Generate with GSAP motion animations"
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 h-8 text-xs font-medium transition-all",
+                  gsapMode
+                    ? "bg-primary/20 text-primary border border-primary/30"
+                    : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
+                )}
+              >
+                <SparklesIcon className="size-3.5" />
+                GSAP
+              </button>
 
 
               {/* File Upload Dropdown */}

@@ -7,7 +7,7 @@ import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import TextareaAutosize from "react-textarea-autosize";
-import { ArrowUpIcon, Loader2Icon, PlusIcon, XIcon, ImageIcon, VideoIcon, FileTextIcon } from "lucide-react";
+import { ArrowUpIcon, Loader2Icon, PlusIcon, XIcon, ImageIcon, VideoIcon, FileTextIcon, SparklesIcon } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { cn } from "@/lib/utils";
@@ -52,10 +52,15 @@ export const MessageForm = ({ projectId }: Props) => {
     const [attachments, setAttachments] = useState<FileAttachment[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [model, setModel] = useState("gpt-5.2");
+    const [gsapMode, setGsapMode] = useState(false);
 
     useEffect(() => {
         if (project?.model) setModel(project.model);
     }, [project?.model]);
+
+    useEffect(() => {
+        if (project?.gsapMode !== undefined) setGsapMode(project.gsapMode);
+    }, [project?.gsapMode]);
 
     const { startUpload } = useUploadThing("messageAttachment");
 
@@ -163,6 +168,7 @@ export const MessageForm = ({ projectId }: Props) => {
             projectId,
             attachments: attachments.length > 0 ? attachments : undefined,
             model, // Passing the model switcher
+            gsapMode, // Passing the GSAP mode switcher 
         });
     };
 
@@ -297,6 +303,23 @@ export const MessageForm = ({ projectId }: Props) => {
 
 
                         <ModelSelector value={model} onChange={setModel} disabled={isPending} isPro={isPro} />
+
+
+                        <button
+                            type="button"
+                            onClick={() => setGsapMode((v) => !v)}
+                            disabled={isPending}
+                            title="Generate with GSAP motion animations"
+                            className={cn(
+                                "inline-flex items-center gap-1.5 rounded-full px-3 h-8 text-xs font-medium transition-all",
+                                gsapMode
+                                    ? "bg-primary/20 text-primary border border-primary/30"
+                                    : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
+                            )}
+                        >
+                            <SparklesIcon className="size-3.5" />
+                            GSAP
+                        </button>
 
 
                         {/* File Upload Dropdown */}

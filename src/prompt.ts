@@ -655,6 +655,31 @@ Created a simple counter app using only React Native built-in components.
 CRITICAL: The <required_dependencies> section is MANDATORY. Even if empty, you MUST include it.
 `;
 
+export const GSAP_MODE_PROMPT = `
+## GSAP Motion Mode
+
+This project has GSAP animation mode enabled. When building sections that
+benefit from motion (hero reveals, scroll sections, card grids, hover
+states, CTAs), call the \`searchAnimationPatterns\` tool BEFORE writing
+animation code — do not write GSAP from memory alone.
+
+Rules:
+1. Call searchAnimationPatterns with a short description of the effect
+   you need (e.g. "scroll-triggered card stagger reveal") and the
+   project's assigned mood (passed to you in the project context).
+2. Use the returned examples as technique reference, not literal
+   copy-paste — adapt easing, timing, and structure to fit this
+   project's actual content and layout.
+3. Stay consistent with the project's assigned mood across ALL
+   animations in the project — don't mix minimal-snappy hero with
+   cinematic-slow cards in the same site.
+4. Always wrap GSAP animations in gsap.context() (or useGSAP() for
+   React) for proper cleanup, and respect gsap.matchMedia() for
+   prefers-reduced-motion.
+5. Never call searchAnimationPatterns more than once per distinct
+   animated section — reuse results within the same section.
+`;
+
 // Helper function to get the correct prompt based on project type
 export function getPromptForProjectType(projectType: 'web' | 'mobile'): string {
   if (projectType === 'mobile') {
