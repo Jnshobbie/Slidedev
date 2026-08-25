@@ -310,15 +310,32 @@ export const MessageForm = ({ projectId }: Props) => {
                             onClick={() => setGsapMode((v) => !v)}
                             disabled={isPending}
                             title="Generate with GSAP motion animations"
-                            className={cn(
-                                "inline-flex items-center gap-1.5 rounded-full px-3 h-8 text-xs font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                                gsapMode
-                                    ? "bg-primary/20 text-primary border border-primary/30"
-                                    : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
-                            )}
+                            style={{
+                                backgroundColor: gsapMode ? "rgba(59, 130, 246, 0.2)" : "rgba(39, 39, 42, 0.8)",
+                                border: gsapMode ? "1px solid rgba(59, 130, 246, 0.4)" : "1px solid rgba(113, 113, 122, 0.5)",
+                                borderRadius: "8px",
+                                padding: "6px 10px",
+                                color: gsapMode ? "#93c5fd" : "#e4e4e7",
+                                fontSize: "12px",
+                                fontWeight: 500,
+                                transition: "all 0.2s ease",
+                                cursor: isPending ? "not-allowed" : "pointer",
+                                opacity: isPending ? 0.5 : 1,
+                                outline: "none",
+                                boxShadow: "none",
+                            }}
+                            className="inline-flex items-center gap-1.5"
+                            onMouseEnter={(e) => {
+                                if (!isPending && !gsapMode) {
+                                    e.currentTarget.style.backgroundColor = "rgba(63, 63, 70, 0.8)";
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = gsapMode ? "rgba(59, 130, 246, 0.2)" : "rgba(39, 39, 42, 0.8)";
+                            }}
                         >
-                            <SparklesIcon className="size-3.5" />
-                            GSAP
+                            <SparklesIcon style={{ width: "14px", height: "14px" }} />
+                            <span>GSAP</span>
                         </button>
 
 
