@@ -1,5 +1,5 @@
 import { task } from "@trigger.dev/sdk";
-import { Sandbox } from "@e2b/code-interpreter";
+import { Sandbox, CommandExitError } from "@e2b/code-interpreter";
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
 import { prisma } from "@/lib/db";
@@ -518,8 +518,16 @@ Instructions:
                   const { command } = input as { command: string };
                   const sandbox = await Sandbox.connect(sandboxId);
                   await sandbox.setTimeout(SANDBOX_TIMEOUT);
-                  const result = await sandbox.commands.run(command, { timeoutMs: 280_000 });
-                  toolResult = result.stdout;
+                  try {
+                    const result = await sandbox.commands.run(command, { timeoutMs: 280_000 });
+                    toolResult = result.stdout || "Command completed with no output";
+                  } catch (err) {
+                    if (err instanceof CommandExitError) {
+                      toolResult = `Command failed (exit code ${err.exitCode}):\n${err.stderr || err.stdout || "no output"}`;
+                    } else {
+                      throw err;
+                    }
+                  }
                 }
                 toolResults.push({ type: "tool_result", tool_use_id: toolId, content: toolResult });
               }
@@ -585,8 +593,16 @@ Instructions:
                 } else if (functionName === 'terminal' && sandboxId && functionArgs.command) {
                   const sandbox = await Sandbox.connect(sandboxId);
                   await sandbox.setTimeout(SANDBOX_TIMEOUT);
-                  const result = await sandbox.commands.run(functionArgs.command, { timeoutMs: 280_000 });
-                  toolResult = result.stdout;
+                  try {
+                    const result = await sandbox.commands.run(functionArgs.command, { timeoutMs: 280_000 });
+                    toolResult = result.stdout || "Command completed with no output";
+                  } catch (err) {
+                    if (err instanceof CommandExitError) {
+                      toolResult = `Command failed (exit code ${err.exitCode}):\n${err.stderr || err.stdout || "no output"}`;
+                    } else {
+                      throw err;
+                    }
+                  }
                 }
 
                 sectionGptMessages.push({
@@ -717,8 +733,16 @@ Use createOrUpdateFiles with path "app/page.tsx" and that exact content above.
               const { command } = input as { command: string };
               const sandbox = await Sandbox.connect(sandboxId);
               await sandbox.setTimeout(SANDBOX_TIMEOUT);
-              const result = await sandbox.commands.run(command, { timeoutMs: 280_000 });
-              toolResult = result.stdout;
+              try {
+                const result = await sandbox.commands.run(command, { timeoutMs: 280_000 });
+                toolResult = result.stdout || "Command completed with no output";
+              } catch (err) {
+                if (err instanceof CommandExitError) {
+                  toolResult = `Command failed (exit code ${err.exitCode}):\n${err.stderr || err.stdout || "no output"}`;
+                } else {
+                  throw err;
+                }
+              }
             } else if (name === "readFiles" && sandboxId) {
               const { files } = input as { files: string[] };
               const sandbox = await Sandbox.connect(sandboxId);
@@ -823,8 +847,16 @@ Use createOrUpdateFiles with path "app/page.tsx" and that exact content above.
             } else if (functionName === 'terminal' && sandboxId && functionArgs.command) {
               const sandbox = await Sandbox.connect(sandboxId);
               await sandbox.setTimeout(SANDBOX_TIMEOUT);
-              const result = await sandbox.commands.run(functionArgs.command, { timeoutMs: 280_000 }); 
-              toolResult = result.stdout;
+              try {
+                const result = await sandbox.commands.run(functionArgs.command, { timeoutMs: 280_000 });
+                toolResult = result.stdout || "Command completed with no output";
+              } catch (err) {
+                if (err instanceof CommandExitError) {
+                  toolResult = `Command failed (exit code ${err.exitCode}):\n${err.stderr || err.stdout || "no output"}`;
+                } else {
+                  throw err;
+                }
+              }
             } else if (functionName === 'readFiles' && sandboxId && functionArgs.files) {
               const sandbox = await Sandbox.connect(sandboxId);
               await sandbox.setTimeout(SANDBOX_TIMEOUT);
