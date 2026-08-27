@@ -518,7 +518,7 @@ Instructions:
                   const { command } = input as { command: string };
                   const sandbox = await Sandbox.connect(sandboxId);
                   await sandbox.setTimeout(SANDBOX_TIMEOUT);
-                  const result = await sandbox.commands.run(command);
+                  const result = await sandbox.commands.run(command, { timeoutMs: 280_000 });
                   toolResult = result.stdout;
                 }
                 toolResults.push({ type: "tool_result", tool_use_id: toolId, content: toolResult });
@@ -585,7 +585,7 @@ Instructions:
                 } else if (functionName === 'terminal' && sandboxId && functionArgs.command) {
                   const sandbox = await Sandbox.connect(sandboxId);
                   await sandbox.setTimeout(SANDBOX_TIMEOUT);
-                  const result = await sandbox.commands.run(functionArgs.command);
+                  const result = await sandbox.commands.run(functionArgs.command, { timeoutMs: 280_000 });
                   toolResult = result.stdout;
                 }
 
@@ -717,7 +717,7 @@ Use createOrUpdateFiles with path "app/page.tsx" and that exact content above.
               const { command } = input as { command: string };
               const sandbox = await Sandbox.connect(sandboxId);
               await sandbox.setTimeout(SANDBOX_TIMEOUT);
-              const result = await sandbox.commands.run(command);
+              const result = await sandbox.commands.run(command, { timeoutMs: 280_000 });
               toolResult = result.stdout;
             } else if (name === "readFiles" && sandboxId) {
               const { files } = input as { files: string[] };
@@ -823,7 +823,7 @@ Use createOrUpdateFiles with path "app/page.tsx" and that exact content above.
             } else if (functionName === 'terminal' && sandboxId && functionArgs.command) {
               const sandbox = await Sandbox.connect(sandboxId);
               await sandbox.setTimeout(SANDBOX_TIMEOUT);
-              const result = await sandbox.commands.run(functionArgs.command);
+              const result = await sandbox.commands.run(functionArgs.command, { timeoutMs: 280_000 }); 
               toolResult = result.stdout;
             } else if (functionName === 'readFiles' && sandboxId && functionArgs.files) {
               const sandbox = await Sandbox.connect(sandboxId);
