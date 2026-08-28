@@ -138,17 +138,21 @@ model FigmaImport {
 // GSAP Mode: retrieval library of tagged animation patterns.
 // Populated once by scripts/gsap-ingest/*.js, read at generation time
 // by src/lib/gsap-patterns.ts.
-model GsapAnimationPattern {
+model DesignPattern {
   id          String   @id @default(cuid())
+  category    String   @default("gsap") // "gsap" | "mobile-ui" | "landing-page" | "motion"
   technique   String   // e.g. "scroll-triggered card stagger reveal"
   mood        String   // "minimal-snappy" | "bold-elastic" | "cinematic-slow" | "playful-bouncy" | "luxury-smooth"
-  framework   String   // "vanilla" | "react"
+  framework   String   // "vanilla" | "react" | "react-native" | "nextjs"
   description String   @db.Text
+  usageNote   String?  @db.Text // how the calling agent should adapt this snippet
   code        String   @db.Text
-  params      Json?    // extracted ease/duration/stagger hints
+  params      Json?
   embedding   Unsupported("vector(1024)")
   createdAt   DateTime @default(now())
 
   @@index([mood])
   @@index([technique])
+  @@index([category])
+  @@map("GsapAnimationPattern") // keeps the real table name so the existing 29 rows aren't touched
 }
