@@ -1,4 +1,4 @@
-// src/app/api/mcp/route.ts
+// src/app/api/[transport]/route.ts
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import { searchDesignPatterns, type Category } from "@/lib/design-library";
@@ -10,13 +10,12 @@ const CATEGORIES: [Category, ...Category[]] = [
   "motion",
 ];
 
-const handler = createMcpHandler((server) => {
-  server.registerTool(
-    "search_design_patterns",
-    {
-      description:
-        "Search SlideDev's design pattern library for GSAP animations, UI components, and layout techniques matching a natural-language description. Returns code, a description, and a usageNote for each match — read the usageNote before adapting the code, since patterns are framework-specific and copying syntax across frameworks (React vs Vue vs vanilla) will break.",
-      inputSchema: z.object({
+const handler = createMcpHandler(
+  (server) => {
+    server.tool(
+      "search_design_patterns",
+      "Search SlideDev's design pattern library for GSAP animations, UI components, and layout techniques matching a natural-language description. Returns code, a description, and a usageNote for each match — read the usageNote before adapting the code, since patterns are framework-specific and copying syntax across frameworks (React vs Vue vs vanilla) will break.",
+      {
         query: z
           .string()
           .describe(
@@ -42,26 +41,32 @@ const handler = createMcpHandler((server) => {
           .max(10)
           .optional()
           .describe("Max number of patterns to return (default 3)"),
-      }),
-    },
-    async ({ query, category, framework, mood, limit }) => {
-      const results = await searchDesignPatterns(query, {
-        category,
-        framework,
-        mood,
-        limit,
-      });
+      },
+      async ({ query, category, framework, mood, limit }) => {
+        const results = await searchDesignPatterns(query, {
+          category,
+          framework,
+          mood,
+          limit,
+        });
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(results, null, 2),
-          },
-        ],
-      };
-    }
-  );
-});
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(results, null, 2),
+            },
+          ],
+        };
+      }
+    );
+  },
+  {},
+  {
+    basePath: "/api",
+    verboseLogs: true,
+    maxDuration: 60,
+  }
+);
 
 export { handler as GET, handler as POST, handler as DELETE };
