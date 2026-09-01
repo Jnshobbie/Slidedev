@@ -1,5 +1,7 @@
 // src/app/api/[transport]/route.ts
-import { createMcpHandler } from "mcp-handler";
+import { createMcpHandler, withMcpAuth } from "mcp-handler";
+import { auth } from "@clerk/nextjs/server";
+import { verifyClerkToken } from "@clerk/mcp-tools/next";
 import { z } from "zod";
 import { searchDesignPatterns, type Category } from "@/lib/design-library";
 
@@ -10,7 +12,7 @@ const CATEGORIES: [Category, ...Category[]] = [
   "motion",
 ];
 
-const handler = createMcpHandler(
+const baseHandler = createMcpHandler(
   (server) => {
     server.tool(
       "search_design_patterns",
@@ -66,6 +68,18 @@ const handler = createMcpHandler(
     basePath: "/api",
     verboseLogs: true,
     maxDuration: 60,
+  }
+);
+
+const handler = withMcpAuth(
+  baseHandler,
+  async (_req, bearerToken) => {
+    const clerkAuth = await auth({ acceptsToken: "oauth_token" });
+    return verifyClerkToken(clerkAuth, bearerToken);
+  },
+  {
+    required: true,
+    resourceMetadataPath: "/.well-known/oauth-protected-resource/mcp",
   }
 );
 
