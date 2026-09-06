@@ -3,6 +3,7 @@ import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { auth } from "@clerk/nextjs/server";
 import { verifyClerkToken } from "@clerk/mcp-tools/next";
 import { z } from "zod";
+import { consumeMcpSearchCredit } from "@/lib/mcp-usage";
 import { searchDesignPatterns, type Category } from "@/lib/design-library";
 
 const CATEGORIES: [Category, ...Category[]] = [
@@ -44,7 +45,20 @@ const baseHandler = createMcpHandler(
           .optional()
           .describe("Max number of patterns to return (default 3)"),
       },
-      async ({ query, category, framework, mood, limit }) => {
+      async ({ query, category, framework, mood, limit }, extra) => {
+        const userId = extra.authInfo?.extra?.userId as string | undefined;
+        if (!userId) {
+          return { content: [{ type: "text", text: "Authentication required." }], isError: true };
+        }
+
+        const usage = await consumeMcpSearchCredit(userId);
+        if (!usage.allowed) {
+          return {
+            content: [{ type: "text", text: "Monthly search limit reached. Upgrade to Pro for more searches." }],
+            isError: true,
+          };
+        }
+
         const results = await searchDesignPatterns(query, {
           category,
           framework,

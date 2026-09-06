@@ -46,6 +46,11 @@ export async function POST(req: Request) {
           : null;
         const isIdePlan = IDE_VARIANT_ID && variantId === IDE_VARIANT_ID;
 
+        const MCP_VARIANT_ID = process.env.LS_MCP_VARIANT_ID
+          ? parseInt(process.env.LS_MCP_VARIANT_ID)
+          : null;
+        const isMcpPlan = MCP_VARIANT_ID && variantId === MCP_VARIANT_ID;
+
         // Get your variant IDs from LemonSqueezy dashboard
         const YEARLY_VARIANT_ID = process.env.LS_YEARLY_VARIANT_ID
           ? parseInt(process.env.LS_YEARLY_VARIANT_ID)
@@ -68,14 +73,14 @@ export async function POST(req: Request) {
         await prisma.subscription.upsert({
           where: { userId: user.id },
           update: {
-            plan: isIdePlan ? "ide" : "pro",
+            plan: isIdePlan ? "ide" : isMcpPlan ? "mcp" : "pro",
             status: "active",
             lsSubscriptionId,
             expiresAt,
           },
           create: {
             userId: user.id,
-            plan: isIdePlan ? "ide" : "pro",
+            plan: isIdePlan ? "ide" : isMcpPlan ? "mcp" : "pro",
             status: "active",
             lsSubscriptionId,
             expiresAt,
