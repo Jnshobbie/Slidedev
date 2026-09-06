@@ -42,7 +42,7 @@ export default function ConnectPage() {
         </h1>
         <p style={{ color: "#8A8CA0", fontSize: 15, lineHeight: 1.5, marginBottom: 28 }}>
           Copy the URL below and add it as a custom connector in Claude, ChatGPT,
-          or any MCP-compatible AI client. You'll be asked to sign in the first
+          or any MCP-compatible AI client. You will be asked to sign in the first
           time you connect.
         </p>
 
