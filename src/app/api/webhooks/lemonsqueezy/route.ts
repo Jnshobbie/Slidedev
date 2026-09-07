@@ -23,17 +23,22 @@ export async function POST(req: Request) {
     const lsSubscriptionId = event.data?.id as string;
     const endsAt = event.data?.attributes?.ends_at as string | null;
 
-    if (!customerEmail) {
-      return NextResponse.json({ error: "Missing customer email" }, { status: 400 });
-    }
+    const directUserId = event.meta?.custom_data?.user_id as string | undefined;
 
-    const clerk = await clerkClient();
-    const usersResponse = await clerk.users.getUserList({ emailAddress: [customerEmail] });
-    if (!usersResponse.data || usersResponse.data.length === 0) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    let user: { id: string }; 
+    if (directUserId) {
+      user = { id: directUserId };
+    } else {
+      if (!customerEmail) {
+        return NextResponse.json({ error: "Missing customer email" }, { status: 400 });
+      }
+      const clerk = await clerkClient();
+      const usersResponse = await clerk.users.getUserList({ emailAddress: [customerEmail] });
+      if (!usersResponse.data || usersResponse.data.length === 0) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      user = usersResponse.data[0];
     }
-
-    const user = usersResponse.data[0];
 
     switch (eventType) {
       case "subscription_created":
