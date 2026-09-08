@@ -20,19 +20,19 @@ export default async function UpgradePage({
 
   const { plan } = await searchParams;
   const store = process.env.LEMONSQUEEZY_STORE_SLUG;
-  const variantId =
+  const checkoutSlug =
     plan === "yearly"
-      ? process.env.LS_MCP_YEARLY_VARIANT_ID
-      : process.env.LS_MCP_VARIANT_ID;
+      ? process.env.LS_MCP_CHECKOUT_SLUG_YEARLY
+      : process.env.LS_MCP_CHECKOUT_SLUG_MONTHLY;
 
-  if (!store || !variantId) {
+  if (!store || !checkoutSlug) {
     throw new Error(
-      `Upgrade misconfigured: store=${store ?? "MISSING"} variantId=${variantId ?? "MISSING"}`
+      `Upgrade misconfigured: store=${store ?? "MISSING"} checkoutSlug=${checkoutSlug ?? "MISSING"}`
     );
   }
 
   const checkoutUrl =
-    `https://${store}.lemonsqueezy.com/checkout/buy/${variantId}` +
+    `https://${store}.lemonsqueezy.com/checkout/buy/${checkoutSlug}` +
     `?checkout[email]=${encodeURIComponent(email)}` +
     `&checkout[custom][user_id]=${encodeURIComponent(userId)}`;
 
