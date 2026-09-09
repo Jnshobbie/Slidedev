@@ -13,6 +13,12 @@ export async function POST(req: Request) {
     const hmac = crypto.createHmac("sha256", LEMON_SECRET);
     const digest = hmac.update(body).digest("hex");
 
+    console.log("DEBUG secret length:", LEMON_SECRET?.length, "prefix:", LEMON_SECRET?.slice(0, 4));
+    console.log("DEBUG body length:", body.length);
+    console.log("DEBUG computed digest:", digest);
+    console.log("DEBUG received signature:", signature);
+    console.log("DEBUG match:", digest === signature);
+
     if (digest !== signature) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
@@ -25,7 +31,7 @@ export async function POST(req: Request) {
 
     const directUserId = event.meta?.custom_data?.user_id as string | undefined;
 
-    let user: { id: string }; 
+    let user: { id: string };
     if (directUserId) {
       user = { id: directUserId };
     } else {
