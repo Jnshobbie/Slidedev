@@ -1,7 +1,7 @@
 import { RateLimiterPrisma } from "rate-limiter-flexible";
 import { prisma } from "@/lib/db";
 
-const MCP_FREE_POINTS = 20;
+const MCP_FREE_POINTS = 10;
 const MCP_PRO_POINTS = 500;
 const DURATION = 30 * 24 * 60 * 60; // 30 days
 const SEARCH_COST = 1;
