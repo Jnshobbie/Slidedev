@@ -44,8 +44,16 @@ const baseHandler = createMcpHandler(
           .max(10)
           .optional()
           .describe("Max number of patterns to return (default 3)"),
+        excludeMoods: z
+          .array(z.string())
+          .optional()
+          .describe("Optional: mood tags to exclude from results, e.g. ['playful-bouncy'] if that style doesn't fit"),
+        context: z
+          .string()
+          .optional()
+          .describe("Optional: describe existing design tokens/components in the target app (e.g. 'primary color token --brand-500, existing Button and Card components') so retrieval favors compatible patterns"),
       },
-      async ({ query, category, framework, mood, limit }, extra) => {
+      async ({ query, category, framework, mood, limit, excludeMoods, context }, extra) => {
         const userId = extra.authInfo?.extra?.userId as string | undefined;
         if (!userId) {
           return { content: [{ type: "text", text: "Authentication required." }], isError: true };
@@ -64,13 +72,24 @@ const baseHandler = createMcpHandler(
           framework,
           mood,
           limit,
+          excludeMoods,
+          context,
         });
+
+        const formatted = results.map((r) => ({
+          whyItFits: r.description,
+          frameworkCompatibility: r.framework,
+          mood: r.mood,
+          technique: r.technique,
+          usageNote: r.usageNote,
+          code: r.code,
+        }));
 
         return {
           content: [
             {
               type: "text",
-              text: JSON.stringify(results, null, 2),
+              text: JSON.stringify(formatted, null, 2),
             },
           ],
         };

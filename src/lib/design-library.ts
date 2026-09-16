@@ -44,11 +44,23 @@ async function embedQuery(text: string): Promise<number[]> {
 
 export async function searchDesignPatterns(
   query: string,
-  opts?: { category?: Category; framework?: string; mood?: string; limit?: number }
+  opts?: {
+    category?: Category;
+    framework?: string;
+    mood?: string;
+    limit?: number;
+    excludeMoods?: string[];
+    context?: string;
+  }
 ): Promise<DesignPatternResult[]> {
   const limit = opts?.limit ?? 3;
-  const embedding = await embedQuery(query);
+  // context (existing tokens/components the caller wants matched against)
+  // is folded into the embedded text itself, not a filter — this biases
+  // retrieval toward compatible patterns without needing new columns.
+  const embedText = opts?.context ? `${query}\n\nExisting design context: ${opts.context}` : query;
+  const embedding = await embedQuery(embedText);
   const vectorLiteral = `[${embedding.join(",")}]`;
+  const excludeMoods = opts?.excludeMoods?.length ? opts.excludeMoods : null;
 
   const rows = await prisma.$queryRawUnsafe<DesignPatternResult[]>(
     `
@@ -57,6 +69,7 @@ export async function searchDesignPatterns(
     WHERE ($1::text IS NULL OR category = $1)
       AND ($2::text IS NULL OR framework = $2)
       AND ($3::text IS NULL OR mood = $3)
+      AND ($6::text[] IS NULL OR NOT (mood = ANY($6::text[])))
     ORDER BY embedding <=> $4::vector
     LIMIT $5
     `,
@@ -64,7 +77,8 @@ export async function searchDesignPatterns(
     opts?.framework ?? null,
     opts?.mood ?? null,
     vectorLiteral,
-    limit
+    limit,
+    excludeMoods
   );
 
   return rows;
