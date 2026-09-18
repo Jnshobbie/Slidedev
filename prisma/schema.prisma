@@ -138,6 +138,9 @@ model FigmaImport {
 // GSAP Mode: retrieval library of tagged animation patterns.
 // Populated once by scripts/gsap-ingest/*.js, read at generation time
 // by src/lib/gsap-patterns.ts.
+// GSAP Mode: retrieval library of tagged animation patterns.
+// Populated once by scripts/gsap-ingest/*.js, read at generation time
+// by src/lib/gsap-patterns.ts.
 model DesignPattern {
   id          String   @id @default(cuid())
   category    String   @default("gsap") // "gsap" | "mobile-ui" | "landing-page" | "motion"
@@ -146,6 +149,12 @@ model DesignPattern {
   framework   String   // "vanilla" | "react" | "react-native" | "nextjs"
   description String   @db.Text
   usageNote   String?  @db.Text // how the calling agent should adapt this snippet
+  constraints        String?  @db.Text // when this pattern does/doesn't fit
+  antiPatterns       String?  @db.Text // common mistakes when adapting this pattern
+  accessibilityNotes String?  @db.Text
+  motionBudget       String?  @db.Text // relative "how much" motion this adds, for pacing a page
+  sourceRepo  String?  // e.g. "wix/react-native-ui-lib" — the open-source repo this pattern was pulled from
+  license     String?  // "MIT" or "unconfirmed" — never assume permissive reuse without a verified LICENSE file
   code        String   @db.Text
   params      Json?
   embedding   Unsupported("vector(1024)")

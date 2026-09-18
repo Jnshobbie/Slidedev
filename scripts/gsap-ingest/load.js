@@ -57,8 +57,9 @@ async function main() {
 
       await client.query(
         `INSERT INTO "GsapAnimationPattern"
-           (id, category, technique, mood, framework, description, "usageNote", code, params, embedding)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+           (id, category, technique, mood, framework, description, "usageNote", code, params, embedding,
+            constraints, "antiPatterns", "accessibilityNotes", "motionBudget")
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
          ON CONFLICT (id) DO UPDATE SET
            category = EXCLUDED.category,
            technique = EXCLUDED.technique,
@@ -67,11 +68,17 @@ async function main() {
            "usageNote" = EXCLUDED."usageNote",
            code = EXCLUDED.code,
            params = EXCLUDED.params,
-           embedding = EXCLUDED.embedding`,
+           embedding = EXCLUDED.embedding,
+           constraints = EXCLUDED.constraints,
+           "antiPatterns" = EXCLUDED."antiPatterns",
+           "accessibilityNotes" = EXCLUDED."accessibilityNotes",
+           "motionBudget" = EXCLUDED."motionBudget"`,
         [
           s.id, s.category, s.technique, s.mood, s.framework,
           s.description, s.usageNote || null, s.code, s.params,
           JSON.stringify(embedding),
+          s.constraints || null, s.antiPatterns || null,
+          s.accessibilityNotes || null, s.motionBudget || null,
         ]
       );
       console.log(`Loaded ${s.id} (${s.category})`);

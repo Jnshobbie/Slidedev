@@ -16,6 +16,12 @@ interface DesignPatternResult {
   framework: string;
   description: string;
   usageNote: string | null;
+  constraints: string | null;
+  antiPatterns: string | null;
+  accessibilityNotes: string | null;
+  motionBudget: string | null;
+  sourceRepo: string | null;
+  license: string | null;
   code: string;
 }
 
@@ -64,7 +70,9 @@ export async function searchDesignPatterns(
 
   const rows = await prisma.$queryRawUnsafe<DesignPatternResult[]>(
     `
-    SELECT id, category, technique, mood, framework, description, "usageNote", code
+    SELECT id, category, technique, mood, framework, description, "usageNote",
+           constraints, "antiPatterns", "accessibilityNotes", "motionBudget",
+           "sourceRepo", license, code
     FROM "GsapAnimationPattern"
     WHERE ($1::text IS NULL OR category = $1)
       AND ($2::text IS NULL OR framework = $2)

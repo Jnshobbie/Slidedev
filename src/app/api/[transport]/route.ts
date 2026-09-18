@@ -82,6 +82,12 @@ const baseHandler = createMcpHandler(
           mood: r.mood,
           technique: r.technique,
           usageNote: r.usageNote,
+          constraints: r.constraints,
+          antiPatterns: r.antiPatterns,
+          accessibilityNotes: r.accessibilityNotes,
+          motionBudget: r.motionBudget,
+          sourceRepo: r.sourceRepo,
+          license: r.license,
           code: r.code,
         }));
 
