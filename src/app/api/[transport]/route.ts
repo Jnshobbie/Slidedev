@@ -102,7 +102,9 @@ const baseHandler = createMcpHandler(
       }
     );
   },
-  {},
+  {instructions:
+      "For 3D websites (Three.js / react-three-fiber), real CC0 3D models are available directly by URL — no need to host or bundle them yourself. Poly Haven (https://api.polyhaven.com) is 100% CC0, no attribution required: fetch an asset's file list at https://api.polyhaven.com/files/{asset_id} and use the returned glTF URL directly in useGLTF(). Browse available models at https://polyhaven.com/models. Poly Pizza (https://poly.pizza) has more variety but mixed CC0/CC-BY licensing — check each model's license and add attribution if required. Prefer Poly Haven when a suitable model exists, since it needs no attribution handling.",
+  },
   {
     basePath: "/api",
     verboseLogs: true,
