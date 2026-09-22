@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 
-const MCP_URL = "https://mcp.slidedevai.com/api/mcp"; // swap in your real final URL
+const MCP_URL = "https://app.slidedevai.com/api/mcp"; // swap in your real final URL
 
 export default function ConnectPage() {
   const [copied, setCopied] = useState(false);
