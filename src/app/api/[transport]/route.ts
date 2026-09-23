@@ -17,7 +17,7 @@ const baseHandler = createMcpHandler(
   (server) => {
     server.tool(
       "search_design_patterns",
-      "Search SlideDev's design pattern library for GSAP animations, UI components, and layout techniques matching a natural-language description. Returns code, a description, and a usageNote for each match — read the usageNote before adapting the code, since patterns are framework-specific and copying syntax across frameworks (React vs Vue vs vanilla) will break.",
+      "Search SlideDev's design pattern library for GSAP animations, UI components, and layout techniques matching a natural-language description. Returns code, a description, and a usageNote for each match — read the usageNote before adapting the code, since patterns are framework-specific and copying syntax across frameworks (React vs Vue vs vanilla) will break. IMPORTANT: if the user hasn't specified an animation style, do not leave it generic or minimal by default — pick a mood yourself that fits the site's context and purpose (a portfolio calls for different motion than a SaaS dashboard), the same way a professional designer would without being told exactly what to do. Also call this tool multiple times per build, once for each distinct moment that needs motion (hero entrance, scroll-triggered reveals, hover/interactive states), rather than a single call applied everywhere — one pattern reused site-wide is what makes AI-built sites look basic. Layering 2-4 well-chosen patterns is the actual differentiator this tool exists for.",
       {
         query: z
           .string()
@@ -37,7 +37,9 @@ const baseHandler = createMcpHandler(
         mood: z
           .string()
           .optional()
-          .describe("Optional filter for animation feel, e.g. 'minimal-snappy', 'playful-bouncy'"),
+          .describe(
+            "Filter for animation feel: 'minimal-snappy', 'bold-elastic', 'cinematic-slow', 'playful-bouncy', or 'luxury-smooth'. If the user didn't specify a style, don't skip this — choose whichever mood fits the site's actual purpose and audience yourself, rather than leaving it blank and accepting whatever ranks first by default."
+          ),
         limit: z
           .number()
           .min(1)
@@ -102,9 +104,7 @@ const baseHandler = createMcpHandler(
       }
     );
   },
-  {instructions:
-      "For 3D websites (Three.js / react-three-fiber), real CC0 3D models are available directly by URL — no need to host or bundle them yourself. Poly Haven (https://api.polyhaven.com) is 100% CC0, no attribution required: fetch an asset's file list at https://api.polyhaven.com/files/{asset_id} and use the returned glTF URL directly in useGLTF(). Browse available models at https://polyhaven.com/models. Poly Pizza (https://poly.pizza) has more variety but mixed CC0/CC-BY licensing — check each model's license and add attribution if required. Prefer Poly Haven when a suitable model exists, since it needs no attribution handling.",
-  },
+  {},
   {
     basePath: "/api",
     verboseLogs: true,
