@@ -13,6 +13,51 @@ const CATEGORIES: [Category, ...Category[]] = [
   "motion",
 ];
 
+const PREVIEW_URI = "ui://slidedev/preview-test.html";
+
+const PREVIEW_HTML = `<!doctype html>
+<html><head><meta charset="utf-8"/>
+<style>
+  body{margin:0;background:transparent;font-family:system-ui,sans-serif}
+  #wrap{display:flex;justify-content:center;padding:12px}
+  #phone{width:390px;height:780px;border:10px solid #111;border-radius:44px;overflow:hidden;background:#fff;position:relative}
+  #status{font-size:12px;color:#888;text-align:center;padding:4px}
+</style></head>
+<body>
+<div id="status">loading...</div>
+<div id="wrap"><div id="phone"><div id="root" style="height:100%"></div></div></div>
+<script type="module">
+  var status = document.getElementById("status");
+  function send(m){ window.parent.postMessage(m, "*"); }
+  function size(){ send({jsonrpc:"2.0",method:"ui/notifications/size-changed",params:{width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight}}); }
+  window.addEventListener("message", function(e){
+    var m = e.data;
+    if (m && m.id === 1) { send({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}}); size(); }
+  });
+  send({jsonrpc:"2.0",id:1,method:"ui/initialize",params:{appInfo:{name:"slidedev-preview",version:"0.1.0"},appCapabilities:{},protocolVersion:"2026-01-26"}});
+
+  var deps = "?deps=react@18.3.1,react-dom@18.3.1";
+  Promise.all([
+    import("https://esm.sh/react@18.3.1"),
+    import("https://esm.sh/react-dom@18.3.1/client" + "?deps=react@18.3.1"),
+    import("https://esm.sh/react-native-web@0.19.13" + deps)
+  ]).then(function(mods){
+    var React = mods[0].default;
+    var createRoot = mods[1].createRoot;
+    var RNW = mods[2];
+    function App(){
+      var s = React.useState(0);
+      return React.createElement(RNW.View, {style:{flex:1,alignItems:"center",justifyContent:"center",backgroundColor:"#0A0A0A"}},
+        React.createElement(RNW.Text, {style:{color:"#D2E70E",fontSize:28,marginBottom:16}}, "Taps: " + s[0]),
+        React.createElement(RNW.Pressable, {onPress:function(){ s[1](s[0]+1); }, style:{backgroundColor:"#D2E70E",padding:16,borderRadius:12}},
+          React.createElement(RNW.Text, {style:{color:"#0A0A0A",fontWeight:"700"}}, "Tap me")));
+    }
+    createRoot(document.getElementById("root")).render(React.createElement(App));
+    status.textContent = "react-native-web loaded";
+    size();
+  }).catch(function(err){ status.textContent = "FAILED: " + err; size(); });
+</script></body></html>`;
+
 const baseHandler = createMcpHandler(
   (server) => {
     server.tool(
@@ -102,6 +147,33 @@ const baseHandler = createMcpHandler(
           ],
         };
       }
+    );
+        server.registerResource(
+      "preview-test",
+      PREVIEW_URI,
+      { mimeType: "text/html;profile=mcp-app" },
+      async () => ({
+        contents: [
+          {
+            uri: PREVIEW_URI,
+            mimeType: "text/html;profile=mcp-app",
+            text: PREVIEW_HTML,
+            _meta: { ui: { csp: { resourceDomains: ["https://esm.sh"] } } },
+          },
+        ],
+      })
+    );
+
+    server.registerTool(
+      "preview_test",
+      {
+        description:
+          "Renders a small interactive phone preview test. Call this when the user asks to test the mobile preview.",
+        _meta: { ui: { resourceUri: PREVIEW_URI } },
+      },
+      async () => ({
+        content: [{ type: "text", text: "Preview rendered." }],
+      })
     );
   },
   {},
