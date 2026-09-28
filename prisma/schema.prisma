@@ -114,6 +114,18 @@ model IdeConversation {
   messages  IdeMessage[]
 }
 
+model MobilePreview {
+  id          String   @id @default(cuid())
+  hash        String   @unique
+  userId      String
+  code        String   @db.Text
+  entry       String   @default("App")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
 model IdeMessage {
   id             String          @id @default(cuid())
   conversationId String

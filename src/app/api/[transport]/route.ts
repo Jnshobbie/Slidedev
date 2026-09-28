@@ -5,6 +5,8 @@ import { verifyClerkToken } from "@clerk/mcp-tools/next";
 import { z } from "zod";
 import { consumeMcpSearchCredit } from "@/lib/mcp-usage";
 import { searchDesignPatterns, type Category } from "@/lib/design-library";
+import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { savePreview } from "@/lib/preview-store";
 
 const CATEGORIES: [Category, ...Category[]] = [
   "gsap",
@@ -13,9 +15,8 @@ const CATEGORIES: [Category, ...Category[]] = [
   "motion",
 ];
 
-const PREVIEW_URI = "ui://slidedev/preview-test.html";
-
-const PREVIEW_HTML = `<!doctype html>
+function buildPreviewHtml(hash: string): string {
+  return `<!doctype html>
 <html><head><meta charset="utf-8"/>
 <style>
   body{margin:0;background:transparent;font-family:-apple-system,system-ui,sans-serif}
@@ -26,18 +27,25 @@ const PREVIEW_HTML = `<!doctype html>
   #island{position:absolute;top:11px;left:50%;margin-left:-62px;width:124px;height:36px;border-radius:18px;background:#000;z-index:3}
   #status{position:absolute;top:0;left:0;right:0;height:54px;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:6px 36px 0 52px;color:#fff;mix-blend-mode:difference;font:600 17px -apple-system,system-ui,sans-serif;pointer-events:none}
   #home{position:absolute;bottom:8px;left:50%;margin-left:-67px;width:134px;height:5px;border-radius:3px;background:#fff;mix-blend-mode:difference;z-index:2;pointer-events:none}
+  #err{position:absolute;inset:0;background:#1a0000;color:#ff6b6b;font:12px/1.5 monospace;padding:16px;white-space:pre-wrap;overflow:auto;display:none;z-index:4}
   #status-text{font-size:12px;color:#888;text-align:center;padding:4px}
 </style></head>
 <body>
 <div id="status-text">loading...</div>
 <div id="wrap"><div id="phone"><div id="screen">
   <div id="root"></div>
+  <div id="err"></div>
   <div id="status"><span>9:41</span><svg width="66" height="14" viewBox="0 0 66 14" fill="#fff"><rect x="0" y="9" width="3" height="5" rx="1"/><rect x="5" y="6" width="3" height="8" rx="1"/><rect x="10" y="3" width="3" height="11" rx="1"/><rect x="15" y="0" width="3" height="14" rx="1"/><path d="M27 4c3-3 8-3 11 0l-1.5 1.5c-2-2-6-2-8 0zM29.5 7c1.5-1.5 4.5-1.5 6 0L32.5 10z"/><rect x="42" y="1" width="21" height="12" rx="3.5" fill="none" stroke="#fff" stroke-opacity=".5"/><rect x="44" y="3" width="17" height="8" rx="2"/></svg></div>
   <div id="island"></div>
   <div id="home"></div>
 </div></div></div>
 <script type="module">
   var statusText = document.getElementById("status-text");
+  var errBox = document.getElementById("err");
+  var rootEl = document.getElementById("root");
+  var HASH = ${JSON.stringify(hash)};
+  var API = "https://mcp.slidedevai.com/api/preview-code/" + HASH;
+
   function send(m){ window.parent.postMessage(m, "*"); }
   function size(){ send({jsonrpc:"2.0",method:"ui/notifications/size-changed",params:{width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight}}); }
   window.addEventListener("message", function(e){
@@ -46,27 +54,62 @@ const PREVIEW_HTML = `<!doctype html>
   });
   send({jsonrpc:"2.0",id:1,method:"ui/initialize",params:{appInfo:{name:"slidedev-preview",version:"0.1.0"},appCapabilities:{},protocolVersion:"2026-01-26"}});
 
-  var deps = "?deps=react@18.3.1,react-dom@18.3.1";
   Promise.all([
     import("https://esm.sh/react@18.3.1"),
-    import("https://esm.sh/react-dom@18.3.1/client" + "?deps=react@18.3.1"),
-    import("https://esm.sh/react-native-web@0.19.13" + deps)
+    import("https://esm.sh/react-dom@18.3.1/client?deps=react@18.3.1"),
+    import("https://esm.sh/react-native-web@0.19.13?deps=react@18.3.1,react-dom@18.3.1"),
+    import("https://esm.sh/sucrase@3.35.0")
   ]).then(function(mods){
     var React = mods[0].default;
     var createRoot = mods[1].createRoot;
     var RNW = mods[2];
-    function App(){
-      var s = React.useState(0);
-      return React.createElement(RNW.View, {style:{flex:1,alignItems:"center",justifyContent:"center",backgroundColor:"#0A0A0A",paddingTop:59}},
-        React.createElement(RNW.Text, {style:{color:"#D2E70E",fontSize:28,marginBottom:16}}, "Taps: " + s[0]),
-        React.createElement(RNW.Pressable, {onPress:function(){ s[1](s[0]+1); }, style:{backgroundColor:"#D2E70E",padding:16,borderRadius:12}},
-          React.createElement(RNW.Text, {style:{color:"#0A0A0A",fontWeight:"700"}}, "Tap me")));
+    var Sucrase = mods[3];
+    var root = createRoot(rootEl);
+    var lastCode = null;
+
+    var RNShim = Object.assign({}, RNW, {
+      Platform: { OS: "ios", select: function(o){ return o.ios !== undefined ? o.ios : o.default; } },
+      Dimensions: { get: function(){ return { width: 393, height: 852 }; }, addEventListener: function(){ return { remove: function(){} }; } },
+      useWindowDimensions: function(){ return { width: 393, height: 852 }; },
+      SafeAreaView: function(props){ return React.createElement(RNW.View, Object.assign({}, props, { style: [{ paddingTop: 59, paddingBottom: 34 }, props.style] }), props.children); }
+    });
+
+    function renderCode(code, entry){
+      try {
+        var compiled = Sucrase.transform(code, { transforms: ["jsx", "typescript", "imports"] }).code;
+        var mod = { exports: {} };
+        var req = function(name){
+          if (name === "react") return React;
+          if (name === "react-native") return RNShim;
+          throw new Error("Module not available in preview: " + name);
+        };
+        new Function("module", "exports", "require", compiled)(mod, mod.exports, req);
+        var Comp = mod.exports[entry] || mod.exports.default;
+        if (!Comp) throw new Error("No export named " + entry + " or default found");
+        errBox.style.display = "none";
+        root.render(React.createElement(Comp));
+        statusText.textContent = "updated";
+      } catch (err) {
+        errBox.textContent = String(err && err.stack || err);
+        errBox.style.display = "block";
+        statusText.textContent = "compile error";
+      }
+      size();
     }
-    createRoot(document.getElementById("root")).render(React.createElement(App));
-    statusText.textContent = "react-native-web loaded";
-    size();
+
+    function poll(){
+      fetch(API, { cache: "no-store" }).then(function(r){ return r.json(); }).then(function(data){
+        if (data.code !== lastCode) {
+          lastCode = data.code;
+          renderCode(data.code, data.entry || "App");
+        }
+      }).catch(function(){});
+    }
+    poll();
+    setInterval(poll, 2000);
   }).catch(function(err){ statusText.textContent = "FAILED: " + err; size(); });
 </script></body></html>`;
+}
 
 const baseHandler = createMcpHandler(
   (server) => {
@@ -158,32 +201,50 @@ const baseHandler = createMcpHandler(
         };
       }
     );
-        server.registerResource(
-      "preview-test",
-      PREVIEW_URI,
+
+    server.registerResource(
+      "mobile-preview",
+      new ResourceTemplate("ui://slidedev/preview/{hash}.html", { list: undefined }),
       { mimeType: "text/html;profile=mcp-app" },
-      async () => ({
+      async (uri, { hash }) => ({
         contents: [
           {
-            uri: PREVIEW_URI,
+            uri: uri.href,
             mimeType: "text/html;profile=mcp-app",
-            text: PREVIEW_HTML,
-            _meta: { ui: { csp: { resourceDomains: ["https://esm.sh"] } } },
+            text: buildPreviewHtml(hash as string),
+            _meta: {
+              ui: {
+                csp: {
+                  resourceDomains: ["https://esm.sh"],
+                  connectDomains: ["https://mcp.slidedevai.com"],
+                },
+              },
+            },
           },
         ],
       })
     );
 
     server.registerTool(
-      "preview_test",
+      "preview_mobile_app",
       {
         description:
-          "Renders a small interactive phone preview test. Call this when the user asks to test the mobile preview.",
-        _meta: { ui: { resourceUri: PREVIEW_URI } },
+          "Renders the given React Native (core components only) component code as a live, interactive phone preview inside the chat. Pass the full source of one file exporting the root component as default, or as a named export matching entryComponentName.",
+        inputSchema: {
+          code: z.string().describe("Full source code of the app, using only react and react-native imports"),
+          entryComponentName: z.string().optional().describe("Name of the exported root component, defaults to 'App' or default export"),
+        },
+        _meta: { ui: { resourceUri: "ui://slidedev/preview/{hash}.html" } },
       },
-      async () => ({
-        content: [{ type: "text", text: "Preview rendered." }],
-      })
+      async ({ code, entryComponentName }, extra) => {
+        const userId = (extra.authInfo?.extra?.userId as string | undefined) ?? "anonymous";
+        const entry = entryComponentName || "App";
+        const hash = await savePreview(userId, code, entry);
+        return {
+          content: [{ type: "text", text: "Preview rendered." }],
+          _meta: { ui: { resourceUri: `ui://slidedev/preview/${hash}.html` } },
+        };
+      }
     );
   },
   {},
