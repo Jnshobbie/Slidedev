@@ -18,16 +18,26 @@ const PREVIEW_URI = "ui://slidedev/preview-test.html";
 const PREVIEW_HTML = `<!doctype html>
 <html><head><meta charset="utf-8"/>
 <style>
-  body{margin:0;background:transparent;font-family:system-ui,sans-serif}
+  body{margin:0;background:transparent;font-family:-apple-system,system-ui,sans-serif}
   #wrap{display:flex;justify-content:center;padding:12px}
-  #phone{width:390px;height:780px;border:10px solid #111;border-radius:44px;overflow:hidden;background:#fff;position:relative}
-  #status{font-size:12px;color:#888;text-align:center;padding:4px}
+  #phone{box-sizing:content-box;width:393px;height:852px;padding:12px;border-radius:67px;background:#1c1c1e;box-shadow:0 0 0 2px #3a3a3c,0 20px 40px rgba(0,0,0,.35)}
+  #screen{position:relative;width:393px;height:852px;border-radius:55px;overflow:hidden;background:#000;isolation:isolate}
+  #root{position:absolute;inset:0;display:flex}
+  #island{position:absolute;top:11px;left:50%;margin-left:-62px;width:124px;height:36px;border-radius:18px;background:#000;z-index:3}
+  #status{position:absolute;top:0;left:0;right:0;height:54px;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:6px 36px 0 52px;color:#fff;mix-blend-mode:difference;font:600 17px -apple-system,system-ui,sans-serif;pointer-events:none}
+  #home{position:absolute;bottom:8px;left:50%;margin-left:-67px;width:134px;height:5px;border-radius:3px;background:#fff;mix-blend-mode:difference;z-index:2;pointer-events:none}
+  #status-text{font-size:12px;color:#888;text-align:center;padding:4px}
 </style></head>
 <body>
-<div id="status">loading...</div>
-<div id="wrap"><div id="phone"><div id="root" style="height:100%"></div></div></div>
+<div id="status-text">loading...</div>
+<div id="wrap"><div id="phone"><div id="screen">
+  <div id="root"></div>
+  <div id="status"><span>9:41</span><svg width="66" height="14" viewBox="0 0 66 14" fill="#fff"><rect x="0" y="9" width="3" height="5" rx="1"/><rect x="5" y="6" width="3" height="8" rx="1"/><rect x="10" y="3" width="3" height="11" rx="1"/><rect x="15" y="0" width="3" height="14" rx="1"/><path d="M27 4c3-3 8-3 11 0l-1.5 1.5c-2-2-6-2-8 0zM29.5 7c1.5-1.5 4.5-1.5 6 0L32.5 10z"/><rect x="42" y="1" width="21" height="12" rx="3.5" fill="none" stroke="#fff" stroke-opacity=".5"/><rect x="44" y="3" width="17" height="8" rx="2"/></svg></div>
+  <div id="island"></div>
+  <div id="home"></div>
+</div></div></div>
 <script type="module">
-  var status = document.getElementById("status");
+  var statusText = document.getElementById("status-text");
   function send(m){ window.parent.postMessage(m, "*"); }
   function size(){ send({jsonrpc:"2.0",method:"ui/notifications/size-changed",params:{width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight}}); }
   window.addEventListener("message", function(e){
@@ -47,15 +57,15 @@ const PREVIEW_HTML = `<!doctype html>
     var RNW = mods[2];
     function App(){
       var s = React.useState(0);
-      return React.createElement(RNW.View, {style:{flex:1,alignItems:"center",justifyContent:"center",backgroundColor:"#0A0A0A"}},
+      return React.createElement(RNW.View, {style:{flex:1,alignItems:"center",justifyContent:"center",backgroundColor:"#0A0A0A",paddingTop:59}},
         React.createElement(RNW.Text, {style:{color:"#D2E70E",fontSize:28,marginBottom:16}}, "Taps: " + s[0]),
         React.createElement(RNW.Pressable, {onPress:function(){ s[1](s[0]+1); }, style:{backgroundColor:"#D2E70E",padding:16,borderRadius:12}},
           React.createElement(RNW.Text, {style:{color:"#0A0A0A",fontWeight:"700"}}, "Tap me")));
     }
     createRoot(document.getElementById("root")).render(React.createElement(App));
-    status.textContent = "react-native-web loaded";
+    statusText.textContent = "react-native-web loaded";
     size();
-  }).catch(function(err){ status.textContent = "FAILED: " + err; size(); });
+  }).catch(function(err){ statusText.textContent = "FAILED: " + err; size(); });
 </script></body></html>`;
 
 const baseHandler = createMcpHandler(
