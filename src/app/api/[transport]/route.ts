@@ -40,7 +40,7 @@ function buildPreviewHtml(hash: string): string {
   <div id="home"></div>
 </div></div></div>
 <script type="module">
-  var statusText = document.getElementById("status-text");
+    var statusText = document.getElementById("status-text");
   var errBox = document.getElementById("err");
   var rootEl = document.getElementById("root");
   var HASH = ${JSON.stringify(hash)};
@@ -54,60 +54,85 @@ function buildPreviewHtml(hash: string): string {
   });
   send({jsonrpc:"2.0",id:1,method:"ui/initialize",params:{appInfo:{name:"slidedev-preview",version:"0.1.0"},appCapabilities:{},protocolVersion:"2026-01-26"}});
 
-  Promise.all([
-    import("https://esm.sh/react@18.3.1"),
-    import("https://esm.sh/react-dom@18.3.1/client?deps=react@18.3.1"),
-    import("https://esm.sh/react-native-web@0.19.13?deps=react@18.3.1,react-dom@18.3.1"),
-    import("https://esm.sh/sucrase@3.35.0")
-  ]).then(function(mods){
-    var React = mods[0].default;
-    var createRoot = mods[1].createRoot;
-    var RNW = mods[2];
-    var Sucrase = mods[3];
-    var root = createRoot(rootEl);
-    var lastCode = null;
+  function loadWithTimeout(label, promiseFn, ms){
+    statusText.textContent = "loading " + label + "...";
+    size();
+    return Promise.race([
+      promiseFn().then(function(m){ statusText.textContent = label + " ok"; size(); return m; }),
+      new Promise(function(_, reject){ setTimeout(function(){ reject(new Error(label + " timed out after " + ms + "ms")); }, ms); })
+    ]);
+  }
 
-    var RNShim = Object.assign({}, RNW, {
-      Platform: { OS: "ios", select: function(o){ return o.ios !== undefined ? o.ios : o.default; } },
-      Dimensions: { get: function(){ return { width: 393, height: 852 }; }, addEventListener: function(){ return { remove: function(){} }; } },
-      useWindowDimensions: function(){ return { width: 393, height: 852 }; },
-      SafeAreaView: function(props){ return React.createElement(RNW.View, Object.assign({}, props, { style: [{ paddingTop: 59, paddingBottom: 34 }, props.style] }), props.children); }
-    });
+  loadWithTimeout("react", function(){ return import("https://esm.sh/react@18.3.1"); }, 12000)
+    .then(function(React){
+      return loadWithTimeout("react-dom", function(){ return import("https://esm.sh/react-dom@18.3.1/client?deps=react@18.3.1"); }, 12000)
+        .then(function(RD){ return [React, RD]; });
+    })
+    .then(function(r){
+      var React = r[0], RD = r[1];
+      return loadWithTimeout("react-native-web", function(){ return import("https://esm.sh/react-native-web@0.19.13?deps=react@18.3.1,react-dom@18.3.1"); }, 12000)
+        .then(function(RNW){ return [React, RD, RNW]; });
+    })
+    .then(function(r){
+      var React = r[0], RD = r[1], RNW = r[2];
+      return loadWithTimeout("sucrase", function(){ return import("https://esm.sh/sucrase@3.35.0"); }, 12000)
+        .then(function(Sucrase){ return [React, RD, RNW, Sucrase]; });
+    })
+    .then(function(mods){
+      var React = mods[0].default;
+      var createRoot = mods[1].createRoot;
+      var RNW = mods[2];
+      var Sucrase = mods[3];
+      var root = createRoot(rootEl);
+      var lastCode = null;
 
-    function renderCode(code, entry){
-      try {
-        var compiled = Sucrase.transform(code, { transforms: ["jsx", "typescript", "imports"] }).code;
-        var mod = { exports: {} };
-        var req = function(name){
-          if (name === "react") return React;
-          if (name === "react-native") return RNShim;
-          throw new Error("Module not available in preview: " + name);
-        };
-        new Function("module", "exports", "require", compiled)(mod, mod.exports, req);
-        var Comp = mod.exports[entry] || mod.exports.default;
-        if (!Comp) throw new Error("No export named " + entry + " or default found");
-        errBox.style.display = "none";
-        root.render(React.createElement(Comp));
-        statusText.textContent = "updated";
-      } catch (err) {
-        errBox.textContent = String(err && err.stack || err);
-        errBox.style.display = "block";
-        statusText.textContent = "compile error";
-      }
-      size();
-    }
+      var RNShim = Object.assign({}, RNW, {
+        Platform: { OS: "ios", select: function(o){ return o.ios !== undefined ? o.ios : o.default; } },
+        Dimensions: { get: function(){ return { width: 393, height: 852 }; }, addEventListener: function(){ return { remove: function(){} }; } },
+        useWindowDimensions: function(){ return { width: 393, height: 852 }; },
+        SafeAreaView: function(props){ return React.createElement(RNW.View, Object.assign({}, props, { style: [{ paddingTop: 59, paddingBottom: 34 }, props.style] }), props.children); }
+      });
 
-    function poll(){
-      fetch(API, { cache: "no-store" }).then(function(r){ return r.json(); }).then(function(data){
-        if (data.code !== lastCode) {
-          lastCode = data.code;
-          renderCode(data.code, data.entry || "App");
+      function renderCode(code, entry){
+        try {
+          var compiled = Sucrase.transform(code, { transforms: ["jsx", "typescript", "imports"] }).code;
+          var mod = { exports: {} };
+          var req = function(name){
+            if (name === "react") return React;
+            if (name === "react-native") return RNShim;
+            throw new Error("Module not available in preview: " + name);
+          };
+          new Function("module", "exports", "require", compiled)(mod, mod.exports, req);
+          var Comp = mod.exports[entry] || mod.exports.default;
+          if (!Comp) throw new Error("No export named " + entry + " or default found");
+          errBox.style.display = "none";
+          root.render(React.createElement(Comp));
+          statusText.textContent = "updated";
+        } catch (err) {
+          errBox.textContent = String(err && err.stack || err);
+          errBox.style.display = "block";
+          statusText.textContent = "compile error";
         }
-      }).catch(function(){});
-    }
-    poll();
-    setInterval(poll, 2000);
-  }).catch(function(err){ statusText.textContent = "FAILED: " + err; size(); });
+        size();
+      }
+
+      function poll(){
+        fetch(API, { cache: "no-store" }).then(function(r){ return r.json(); }).then(function(data){
+          if (data.code !== lastCode) {
+            lastCode = data.code;
+            renderCode(data.code, data.entry || "App");
+          }
+        }).catch(function(){});
+      }
+      poll();
+      setInterval(poll, 2000);
+    })
+    .catch(function(err){
+      errBox.textContent = String(err && err.stack || err);
+      errBox.style.display = "block";
+      statusText.textContent = "FAILED";
+      size();
+    });
 </script></body></html>`;
 }
 
