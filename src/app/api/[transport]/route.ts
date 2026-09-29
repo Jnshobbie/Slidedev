@@ -5,7 +5,6 @@ import { verifyClerkToken } from "@clerk/mcp-tools/next";
 import { z } from "zod";
 import { consumeMcpSearchCredit } from "@/lib/mcp-usage";
 import { searchDesignPatterns, type Category } from "@/lib/design-library";
-import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { savePreview } from "@/lib/preview-store";
 
 const CATEGORIES: [Category, ...Category[]] = [
@@ -15,7 +14,7 @@ const CATEGORIES: [Category, ...Category[]] = [
   "motion",
 ];
 
-function buildPreviewHtml(hash: string): string {
+function buildPreviewHtml(): string {
   return `<!doctype html>
 <html><head><meta charset="utf-8"/>
 <style>
@@ -43,15 +42,24 @@ function buildPreviewHtml(hash: string): string {
   var statusText = document.getElementById("status-text");
   var errBox = document.getElementById("err");
   var rootEl = document.getElementById("root");
-  var HASH = ${JSON.stringify(hash)};
-  statusText.textContent = "hash: " + HASH;
-  var API = "https://app.slidedevai.com/api/preview-code/" + HASH;
+  var HASH = null;
+  var API_BASE = "https://app.slidedevai.com/api/preview-code/";
+  var pending = null;
+  var renderReady = null;
 
   function send(m){ window.parent.postMessage(m, "*"); }
   function size(){ send({jsonrpc:"2.0",method:"ui/notifications/size-changed",params:{width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight}}); }
   window.addEventListener("message", function(e){
     var m = e.data;
     if (m && m.id === 1) { send({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}}); size(); }
+    if (m && m.method === "ui/notifications/tool-result") {
+      var sc = m.params && m.params.structuredContent;
+      if (sc && sc.code) {
+        HASH = sc.hash;
+        if (renderReady) { renderReady(sc.code, sc.entry || "App"); }
+        else { pending = sc; }
+      }
+    }
   });
   send({jsonrpc:"2.0",id:1,method:"ui/initialize",params:{appInfo:{name:"slidedev-preview",version:"0.1.0"},appCapabilities:{},protocolVersion:"2026-01-26"}});
 
@@ -117,8 +125,12 @@ function buildPreviewHtml(hash: string): string {
         size();
       }
 
+      renderReady = function(code, entry){ lastCode = code; renderCode(code, entry); };
+      if (pending) { renderReady(pending.code, pending.entry); }
+
       function poll(){
-        fetch(API, { cache: "no-store" }).then(function(r){
+        if (!HASH) return;
+        fetch(API_BASE + HASH, { cache: "no-store" }).then(function(r){
           if (!r.ok) throw new Error("HTTP " + r.status + " from preview-code endpoint");
           return r.json();
         }).then(function(data){
@@ -236,14 +248,14 @@ const baseHandler = createMcpHandler(
 
     server.registerResource(
       "mobile-preview",
-      new ResourceTemplate("ui://slidedev/preview/{hash}.html", { list: undefined }),
+      "ui://slidedev/preview.html",
       { mimeType: "text/html;profile=mcp-app" },
-      async (uri, { hash }) => ({
+      async () => ({
         contents: [
           {
-            uri: uri.href,
+            uri: "ui://slidedev/preview.html",
             mimeType: "text/html;profile=mcp-app",
-            text: buildPreviewHtml(hash as string),
+            text: buildPreviewHtml(),
             _meta: {
               ui: {
                 csp: {
@@ -266,7 +278,7 @@ const baseHandler = createMcpHandler(
           code: z.string().describe("Full source code of the app, using only react and react-native imports"),
           entryComponentName: z.string().optional().describe("Name of the exported root component, defaults to 'App' or default export"),
         },
-        _meta: { ui: { resourceUri: "ui://slidedev/preview/{hash}.html" } },
+        _meta: { ui: { resourceUri: "ui://slidedev/preview.html" } },
       },
       async ({ code, entryComponentName }, extra) => {
         const userId = (extra.authInfo?.extra?.userId as string | undefined) ?? "anonymous";
@@ -274,7 +286,7 @@ const baseHandler = createMcpHandler(
         const hash = await savePreview(userId, code, entry);
         return {
           content: [{ type: "text", text: "Preview rendered." }],
-          _meta: { ui: { resourceUri: `ui://slidedev/preview/${hash}.html` } },
+          structuredContent: { hash, code, entry },
         };
       }
     );
