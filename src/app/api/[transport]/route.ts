@@ -40,10 +40,11 @@ function buildPreviewHtml(hash: string): string {
   <div id="home"></div>
 </div></div></div>
 <script type="module">
-    var statusText = document.getElementById("status-text");
+  var statusText = document.getElementById("status-text");
   var errBox = document.getElementById("err");
   var rootEl = document.getElementById("root");
   var HASH = ${JSON.stringify(hash)};
+  statusText.textContent = "hash: " + HASH;
   var API = "https://app.slidedevai.com/api/preview-code/" + HASH;
 
   function send(m){ window.parent.postMessage(m, "*"); }
