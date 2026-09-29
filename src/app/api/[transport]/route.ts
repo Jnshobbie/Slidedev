@@ -44,7 +44,7 @@ function buildPreviewHtml(hash: string): string {
   var errBox = document.getElementById("err");
   var rootEl = document.getElementById("root");
   var HASH = ${JSON.stringify(hash)};
-  var API = "https://mcp.slidedevai.com/api/preview-code/" + HASH;
+  var API = "https://app.slidedevai.com/api/preview-code/" + HASH;
 
   function send(m){ window.parent.postMessage(m, "*"); }
   function size(){ send({jsonrpc:"2.0",method:"ui/notifications/size-changed",params:{width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight}}); }
@@ -247,7 +247,7 @@ const baseHandler = createMcpHandler(
               ui: {
                 csp: {
                   resourceDomains: ["https://esm.sh"],
-                  connectDomains: ["https://mcp.slidedevai.com"],
+                  connectDomains: ["https://app.slidedevai.com"],
                 },
               },
             },
