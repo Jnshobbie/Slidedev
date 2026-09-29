@@ -114,9 +114,9 @@ function buildPreviewHtml(hash: string): string {
           statusText.textContent = "compile error";
         }
         size();
-      } 
+      }
 
-      function poll(){ 
+      function poll(){
         fetch(API, { cache: "no-store" }).then(function(r){
           if (!r.ok) throw new Error("HTTP " + r.status + " from preview-code endpoint");
           return r.json();
@@ -130,6 +130,9 @@ function buildPreviewHtml(hash: string): string {
           size();
         });
       }
+      poll();
+      setInterval(poll, 2000);
+    })
     .catch(function(err){
       errBox.textContent = String(err && err.stack || err);
       errBox.style.display = "block";
