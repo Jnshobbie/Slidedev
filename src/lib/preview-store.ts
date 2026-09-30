@@ -19,3 +19,8 @@ export async function savePreview(userId: string, code: string, entry: string) {
 export async function getPreview(hash: string) {
   return prisma.mobilePreview.findUnique({ where: { hash } });
 }
+
+export async function deleteStalePreviews(olderThanHours = 24) {
+  const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
+  return prisma.mobilePreview.deleteMany({ where: { updatedAt: { lt: cutoff } } });
+}

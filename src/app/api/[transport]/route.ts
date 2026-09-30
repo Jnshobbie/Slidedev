@@ -17,8 +17,10 @@ const CATEGORIES: [Category, ...Category[]] = [
 function buildPreviewHtml(): string {
   return `<!doctype html>
 <html><head><meta charset="utf-8"/>
+<meta name="color-scheme" content="light dark"/>
 <style>
-  body{margin:0;background:transparent;font-family:-apple-system,system-ui,sans-serif}
+  html,body{margin:0;height:100%;background:transparent}
+  body{font-family:-apple-system,system-ui,sans-serif}
   #wrap{display:flex;justify-content:center;padding:12px}
   #phone{box-sizing:content-box;width:393px;height:852px;padding:12px;border-radius:67px;background:#1c1c1e;box-shadow:0 0 0 2px #3a3a3c,0 20px 40px rgba(0,0,0,.35)}
   #screen{position:relative;width:393px;height:852px;border-radius:55px;overflow:hidden;background:#000;isolation:isolate}
@@ -37,7 +39,9 @@ function buildPreviewHtml(): string {
   <div id="status"><span>9:41</span><svg width="66" height="14" viewBox="0 0 66 14" fill="#fff"><rect x="0" y="9" width="3" height="5" rx="1"/><rect x="5" y="6" width="3" height="8" rx="1"/><rect x="10" y="3" width="3" height="11" rx="1"/><rect x="15" y="0" width="3" height="14" rx="1"/><path d="M27 4c3-3 8-3 11 0l-1.5 1.5c-2-2-6-2-8 0zM29.5 7c1.5-1.5 4.5-1.5 6 0L32.5 10z"/><rect x="42" y="1" width="21" height="12" rx="3.5" fill="none" stroke="#fff" stroke-opacity=".5"/><rect x="44" y="3" width="17" height="8" rx="2"/></svg></div>
   <div id="island"></div>
   <div id="home"></div>
-</div></div></div>
+</div></div>
+<div style="text-align:center;font-size:11px;color:#888;margin-top:8px;max-width:393px">Layout preview only. Fonts and native controls may differ on a real device.</div>
+</div>
 <script type="module">
   var statusText = document.getElementById("status-text");
   var errBox = document.getElementById("err");
@@ -95,12 +99,122 @@ function buildPreviewHtml(): string {
       var root = createRoot(rootEl);
       var lastCode = null;
 
+      // ---- Alert.alert shim: RNW does not implement this at all, so we build a real one ----
+      var alertListeners = [];
+      var AlertShim = {
+        alert: function(title, message, buttons){
+          var btns = (buttons && buttons.length) ? buttons : [{ text: "OK" }];
+          alertListeners.forEach(function(fn){ fn({ title: title, message: message, buttons: btns }); });
+        }
+      };
+      function AlertHost(){
+        var st = React.useState(null);
+        React.useEffect(function(){
+          var fn = function(a){ st[1](a); };
+          alertListeners.push(fn);
+          return function(){ alertListeners = alertListeners.filter(function(f){ return f !== fn; }); };
+        }, []);
+        if (!st[0]) return null;
+        var a = st[0];
+        function close(btn){
+          st[1](null);
+          if (btn.onPress) btn.onPress();
+        }
+        return React.createElement(RNW.View, { style: { position: "absolute", inset: 0, zIndex: 50, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.35)" } },
+          React.createElement(RNW.View, { style: { width: 270, borderRadius: 14, backgroundColor: "rgba(30,30,30,0.9)", overflow: "hidden" } },
+            React.createElement(RNW.View, { style: { padding: 16, alignItems: "center" } },
+              React.createElement(RNW.Text, { style: { color: "#fff", fontWeight: "600", fontSize: 16, marginBottom: a.message ? 4 : 0, textAlign: "center" } }, a.title || ""),
+              a.message ? React.createElement(RNW.Text, { style: { color: "#ddd", fontSize: 13, textAlign: "center" } }, a.message) : null
+            ),
+            React.createElement(RNW.View, { style: { flexDirection: "row", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.15)" } },
+              a.buttons.map(function(btn, i){
+                return React.createElement(RNW.Pressable, {
+                  key: i,
+                  onPress: function(){ close(btn); },
+                  style: { flex: 1, paddingVertical: 12, alignItems: "center", borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: "rgba(255,255,255,0.15)" }
+                }, React.createElement(RNW.Text, { style: { color: btn.style === "destructive" ? "#ff453a" : "#0a84ff", fontWeight: btn.style === "cancel" ? "400" : "600", fontSize: 15 } }, btn.text || "OK"));
+              })
+            )
+          )
+        );
+      }
+
+      // ---- Lightweight screen stack, push/pop with a slide transition ----
+      var StackCtx = React.createContext(null);
+      function useNavigation(){ return React.useContext(StackCtx); }
+      function StackNavigator(props){
+        var st = React.useState([{ key: "root", Screen: props.initial }]);
+        var nav = {
+          push: function(Screen, params){ st[1](st[0].concat([{ key: "s" + st[0].length + Date.now(), Screen: Screen, params: params }])); },
+          pop: function(){ if (st[0].length > 1) st[1](st[0].slice(0, -1)); },
+          params: {}
+        };
+        return React.createElement(StackCtx.Provider, { value: nav },
+          React.createElement(RNW.View, { style: { flex: 1 } },
+            st[0].map(function(entry, i){
+              var isTop = i === st[0].length - 1;
+              return React.createElement(RNW.View, {
+                key: entry.key,
+                style: {
+                  willChange: "transform",
+                  position: i === 0 ? "relative" : "absolute", inset: 0, flex: 1,
+                  transitionProperty: "transform", transitionDuration: "260ms", transitionTimingFunction: "ease-out",
+                  transform: [{ translateX: isTop ? 0 : (i === st[0].length - 2 ? -40 : 0) }]
+                }
+              }, React.createElement(entry.Screen, { navigation: Object.assign({}, nav, { params: entry.params || {} }) }));
+            })
+          )
+        );
+      }
+
+      // ---- KeyboardAvoidingView using the real visualViewport API ----
+      function KeyboardAvoidingView(props){
+        var st = React.useState(0);
+        React.useEffect(function(){
+          if (!window.visualViewport) return;
+          function onResize(){
+            var h = window.innerHeight - window.visualViewport.height;
+            st[1](h > 60 ? h : 0);
+          }
+          window.visualViewport.addEventListener("resize", onResize);
+          return function(){ window.visualViewport.removeEventListener("resize", onResize); };
+        }, []);
+        return React.createElement(RNW.View, Object.assign({}, props, { style: [props.style, { paddingBottom: st[0] }] }), props.children);
+      }
+
+      // ---- Pressable with real scale/opacity feedback instead of RNW's default instant swap ----
+      function PressableShim(props){
+        var st = React.useState(false);
+        return React.createElement(RNW.Pressable, Object.assign({}, props, {
+          onPressIn: function(e){ st[1](true); props.onPressIn && props.onPressIn(e); },
+          onPressOut: function(e){ st[1](false); props.onPressOut && props.onPressOut(e); },
+          style: function(state){
+            var base = typeof props.style === "function" ? props.style(state) : props.style;
+            return [base, { transform: [{ scale: st[0] ? 0.96 : 1 }], opacity: st[0] ? 0.85 : 1, transitionProperty: "transform, opacity", transitionDuration: "120ms", willChange: "transform" }];
+          }
+        }), props.children);
+      }
+
+      // ---- ScrollView with momentum + contained overscroll instead of default web scroll ----
+      function ScrollViewShim(props){
+        return React.createElement(RNW.ScrollView, Object.assign({}, props, {
+          style: [props.style, { WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }]
+        }), props.children);
+      }
+
       var RNShim = Object.assign({}, RNW, {
         Platform: { OS: "ios", select: function(o){ return o.ios !== undefined ? o.ios : o.default; } },
         Dimensions: { get: function(){ return { width: 393, height: 852 }; }, addEventListener: function(){ return { remove: function(){} }; } },
         useWindowDimensions: function(){ return { width: 393, height: 852 }; },
-        SafeAreaView: function(props){ return React.createElement(RNW.View, Object.assign({}, props, { style: [{ paddingTop: 59, paddingBottom: 34 }, props.style] }), props.children); }
+        SafeAreaView: function(props){ return React.createElement(RNW.View, Object.assign({}, props, { style: [{ paddingTop: 59, paddingBottom: 34 }, props.style] }), props.children); },
+        Alert: AlertShim,
+        Vibration: { vibrate: function(){}, cancel: function(){} },
+        KeyboardAvoidingView: KeyboardAvoidingView,
+        Pressable: PressableShim,
+        ScrollView: ScrollViewShim
       });
+
+      var NavShim = { StackNavigator: StackNavigator, useNavigation: useNavigation };
 
       function renderCode(code, entry){
         try {
@@ -109,13 +223,14 @@ function buildPreviewHtml(): string {
           var req = function(name){
             if (name === "react") return React;
             if (name === "react-native") return RNShim;
+            if (name === "slidedev-nav") return NavShim;
             throw new Error("Module not available in preview: " + name);
           };
           new Function("module", "exports", "require", compiled)(mod, mod.exports, req);
           var Comp = mod.exports[entry] || mod.exports.default;
           if (!Comp) throw new Error("No export named " + entry + " or default found");
           errBox.style.display = "none";
-          root.render(React.createElement(Comp));
+          root.render(React.createElement(React.Fragment, null, React.createElement(Comp), React.createElement(AlertHost)));
           statusText.textContent = "updated";
         } catch (err) {
           errBox.textContent = String(err && err.stack || err);
@@ -258,6 +373,7 @@ const baseHandler = createMcpHandler(
             text: buildPreviewHtml(),
             _meta: {
               ui: {
+                prefersBorder: false,
                 csp: {
                   resourceDomains: ["https://esm.sh"],
                   connectDomains: ["https://app.slidedevai.com"],
@@ -273,7 +389,7 @@ const baseHandler = createMcpHandler(
       "preview_mobile_app",
       {
         description:
-          "Renders the given React Native (core components only) component code as a live, interactive phone preview inside the chat. Pass the full source of one file exporting the root component as default, or as a named export matching entryComponentName.",
+          "Renders React Native component code as a live, interactive iPhone preview inside the chat. Pass the full source of one file exporting the root component as default, or as a named export matching entryComponentName. Only 'react' and 'react-native' may be imported, no Expo packages, no third-party libraries. For multi-screen apps, import { StackNavigator, useNavigation } from 'slidedev-nav': wrap your app in <StackNavigator initial={HomeScreen} />, and inside any screen, call const nav = useNavigation() then nav.push(OtherScreen, params) or nav.pop(). Use Alert from 'react-native' for confirmations, it's fully supported here even though standard react-native-web doesn't implement it.",
         inputSchema: {
           code: z.string().describe("Full source code of the app, using only react and react-native imports"),
           entryComponentName: z.string().optional().describe("Name of the exported root component, defaults to 'App' or default export"),

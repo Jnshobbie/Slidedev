@@ -5,7 +5,8 @@ import { getPreview } from "@/lib/preview-store";
 export async function GET(_req: Request, { params }: { params: Promise<{ hash: string }> }) {
   const { hash } = await params;
   const entry = await getPreview(hash);
-  if (!entry) {
+  const TEN_MINUTES = 10 * 60 * 1000;
+  if (!entry || Date.now() - entry.updatedAt.getTime() > TEN_MINUTES) {
     return NextResponse.json({ code: "", entry: "App" }, { status: 404, headers: { "Access-Control-Allow-Origin": "*" } });
   }
   return NextResponse.json(
