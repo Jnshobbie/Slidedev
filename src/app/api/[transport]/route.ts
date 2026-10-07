@@ -41,6 +41,7 @@ function buildPreviewHtml(): string {
   <div id="home"></div>
 </div></div>
 <div style="text-align:center;font-size:11px;color:#888;margin-top:8px;max-width:393px">Layout preview only. Fonts and native controls may differ on a real device.</div>
+<div id="qrbox" style="display:none;text-align:center;margin-top:12px;color:#888;font-size:11px"><canvas id="qr"></canvas><div>Scan with Expo Go to test on your phone</div></div>
 </div>
 <script type="module">
   var statusText = document.getElementById("status-text");
@@ -60,6 +61,7 @@ function buildPreviewHtml(): string {
       var sc = m.params && m.params.structuredContent;
       if (sc && sc.code) {
         HASH = sc.hash;
+        if (sc.expUrl) { import("https://esm.sh/qrcode@1.5.4").then(function(m){ var Q = m.default || m; Q.toCanvas(document.getElementById("qr"), sc.expUrl, { width: 160, margin: 1 }, function(){ document.getElementById("qrbox").style.display = "block"; size(); }); }).catch(function(){}); }
         if (renderReady) { renderReady(sc.code, sc.entry || "App"); }
         else { pending = sc; }
       }
@@ -270,6 +272,56 @@ function buildPreviewHtml(): string {
 </script></body></html>`;
 }
 
+const SNACK_API = "https://slidedev-snack-service.vercel.app/api/create-snack";
+
+const NATIVE_NAV_SHIM = `
+import * as __R from 'react';
+import { View as __V } from 'react-native';
+const __Ctx = __R.createContext(null);
+const useNavigation = () => __R.useContext(__Ctx);
+function StackNavigator(props) {
+  const [stack, setStack] = __R.useState([{ key: 'root', Screen: props.initial }]);
+  const nav = {
+    push: (Screen, params) => setStack(s => s.concat([{ key: 's' + s.length, Screen, params }])),
+    pop: () => setStack(s => (s.length > 1 ? s.slice(0, -1) : s)),
+  };
+  const top = stack[stack.length - 1];
+  return (
+    <__Ctx.Provider value={nav}>
+      <__V style={{ flex: 1 }}>
+        <top.Screen navigation={{ ...nav, params: top.params || {} }} />
+      </__V>
+    </__Ctx.Provider>
+  );
+}
+`;
+
+function toNativeCode(code: string, entry: string): string {
+  let out = code.replace(/^\s*import[^;\n]*['"]slidedev-nav['"];?\s*$/gm, "");
+  if (code.includes("slidedev-nav")) out = NATIVE_NAV_SHIM + out;
+  if (!/export\s+default/.test(out)) out += `\nexport default ${entry};\n`;
+  return out;
+}
+
+async function createExpoGoLink(code: string, entry: string): Promise<string | null> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(SNACK_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ files: { "App.js": toNativeCode(code, entry) }, name: "SlideDev Preview" }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    if (!r.ok) return null;
+    const d = (await r.json()) as { expUrl?: string; snackUrl?: string };
+    return d.expUrl ?? d.snackUrl?.replace("https://snack.expo.dev/", "exp://exp.host/") ?? null;
+  } catch {
+    return null;
+  }
+}
+
 const baseHandler = createMcpHandler(
   (server) => {
     server.tool(
@@ -399,10 +451,13 @@ const baseHandler = createMcpHandler(
       async ({ code, entryComponentName }, extra) => {
         const userId = (extra.authInfo?.extra?.userId as string | undefined) ?? "anonymous";
         const entry = entryComponentName || "App";
-        const hash = await savePreview(userId, code, entry);
+        const [hash, expUrl] = await Promise.all([
+          savePreview(userId, code, entry),
+          createExpoGoLink(code, entry),
+        ]);
         return {
           content: [{ type: "text", text: "Preview rendered." }],
-          structuredContent: { hash, code, entry },
+          structuredContent: { hash, code, entry, expUrl },
         };
       }
     );
