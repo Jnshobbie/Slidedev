@@ -12,6 +12,7 @@ const CATEGORIES: [Category, ...Category[]] = [
   "mobile-ui",
   "landing-page",
   "motion",
+  "3d",
 ];
 
 function buildPreviewHtml(): string {
@@ -337,8 +338,7 @@ const baseHandler = createMcpHandler(
           .enum(CATEGORIES)
           .optional()
           .describe(
-            "Optional filter: 'gsap' (scroll/entrance animations), 'mobile-ui' (mobile components), 'landing-page' (page-level layouts), or 'motion' (general motion patterns)"
-          ),
+            "Optional filter: 'gsap' (scroll/entrance animations), 'mobile-ui' (mobile components), 'landing-page' (page-level layouts), 'motion' (general motion patterns), or '3d' (Three.js scenes and effects, many with a preview screenshot)"
         framework: z
           .string()
           .optional()
@@ -387,6 +387,23 @@ const baseHandler = createMcpHandler(
           context,
         });
 
+        const withImages = results.filter((r) => Boolean(r.imageUrl)).slice(0, 3);
+        const imageSet = new Set<unknown>(withImages);
+        const imageBlocks = (
+          await Promise.all(
+            withImages.map(async (r) => {
+              try {
+                const res = await fetch(r.imageUrl as string);
+                if (!res.ok) return null;
+                const buf = Buffer.from(await res.arrayBuffer());
+                return { type: "image" as const, data: buf.toString("base64"), mimeType: "image/jpeg" };
+              } catch {
+                return null;
+              }
+            })
+          )
+        ).filter((b): b is NonNullable<typeof b> => b !== null);
+
         const formatted = results.map((r) => ({
           whyItFits: r.description,
           frameworkCompatibility: r.framework,
@@ -399,15 +416,14 @@ const baseHandler = createMcpHandler(
           motionBudget: r.motionBudget,
           sourceRepo: r.sourceRepo,
           license: r.license,
+          previewImage: imageSet.has(r) ? "see the attached image for this pattern" : null,
           code: r.code,
         }));
 
         return {
           content: [
-            {
-              type: "text",
-              text: JSON.stringify(formatted, null, 2),
-            },
+            { type: "text", text: JSON.stringify(formatted, null, 2) },
+            ...imageBlocks,
           ],
         };
       }

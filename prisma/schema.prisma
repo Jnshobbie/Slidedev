@@ -167,6 +167,7 @@ model DesignPattern {
   motionBudget       String?  @db.Text // relative "how much" motion this adds, for pacing a page
   sourceRepo  String?  // e.g. "wix/react-native-ui-lib" — the open-source repo this pattern was pulled from
   license     String?  // "MIT" or "unconfirmed" — never assume permissive reuse without a verified LICENSE file
+  imageUrl    String?  // public URL of a preview screenshot, returned to MCP clients as an image block
   code        String   @db.Text
   params      Json?
   embedding   Unsupported("vector(1024)")

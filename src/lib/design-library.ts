@@ -6,7 +6,7 @@
 
 import { prisma } from "@/lib/db";
 
-export type Category = "gsap" | "mobile-ui" | "landing-page" | "motion";
+export type Category = "gsap" | "mobile-ui" | "landing-page" | "motion" | "3d";
 
 interface DesignPatternResult {
   id: string;
@@ -22,6 +22,7 @@ interface DesignPatternResult {
   motionBudget: string | null;
   sourceRepo: string | null;
   license: string | null;
+  imageUrl: string | null;
   code: string;
 }
 
@@ -72,7 +73,7 @@ export async function searchDesignPatterns(
     `
     SELECT id, category, technique, mood, framework, description, "usageNote",
            constraints, "antiPatterns", "accessibilityNotes", "motionBudget",
-           "sourceRepo", license, code
+            "sourceRepo", license, "imageUrl", code
     FROM "GsapAnimationPattern"
     WHERE ($1::text IS NULL OR category = $1)
       AND ($2::text IS NULL OR framework = $2)
