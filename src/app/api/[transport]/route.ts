@@ -339,6 +339,7 @@ const baseHandler = createMcpHandler(
           .optional()
           .describe(
             "Optional filter: 'gsap' (scroll/entrance animations), 'mobile-ui' (mobile components), 'landing-page' (page-level layouts), 'motion' (general motion patterns), or '3d' (Three.js scenes and effects, many with a preview screenshot)"
+          ),
         framework: z
           .string()
           .optional()
@@ -352,7 +353,7 @@ const baseHandler = createMcpHandler(
         limit: z
           .number()
           .min(1)
-          .max(10)
+          .max(10) 
           .optional()
           .describe("Max number of patterns to return (default 3)"),
         excludeMoods: z
