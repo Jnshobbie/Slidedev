@@ -43,6 +43,7 @@ function buildPreviewHtml(): string {
 </div></div>
 <div style="text-align:center;font-size:11px;color:#888;margin-top:8px;max-width:393px">Layout preview only. Fonts and native controls may differ on a real device.</div>
 <div id="qrbox" style="display:none;text-align:center;margin-top:12px;color:#888;font-size:11px"><canvas id="qr"></canvas><div>Scan with Expo Go to test on your phone</div></div>
+<div id="qrfail" style="display:none;text-align:center;margin-top:12px;color:#888;font-size:11px">QR code unavailable. Ask Claude to run the preview again.</div>
 </div>
 <script type="module">
   var statusText = document.getElementById("status-text");
@@ -52,6 +53,7 @@ function buildPreviewHtml(): string {
   var API_BASE = "https://app.slidedevai.com/api/preview-code/";
   var pending = null;
   var renderReady = null;
+  function showQrFail(){ document.getElementById("qrfail").style.display = "block"; size(); }
 
   function send(m){ window.parent.postMessage(m, "*"); }
   function size(){ send({jsonrpc:"2.0",method:"ui/notifications/size-changed",params:{width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight}}); }
@@ -62,7 +64,7 @@ function buildPreviewHtml(): string {
       var sc = m.params && m.params.structuredContent;
       if (sc && sc.code) {
         HASH = sc.hash;
-        if (sc.expUrl) { import("https://esm.sh/qrcode@1.5.4").then(function(m){ var Q = m.default || m; Q.toCanvas(document.getElementById("qr"), sc.expUrl, { width: 160, margin: 1 }, function(){ document.getElementById("qrbox").style.display = "block"; size(); }); }).catch(function(){}); }
+        if (sc.expUrl) { import("https://esm.sh/qrcode@1.5.4").then(function(m){ var Q = m.default || m; Q.toCanvas(document.getElementById("qr"), sc.expUrl, { width: 160, margin: 1 }, function(err){ if (err) { showQrFail(); return; } document.getElementById("qrbox").style.display = "block"; size(); }); }).catch(function(){ showQrFail(); }); } else { showQrFail(); }
         if (renderReady) { renderReady(sc.code, sc.entry || "App"); }
         else { pending = sc; }
       }
@@ -307,7 +309,7 @@ function toNativeCode(code: string, entry: string): string {
 async function createExpoGoLink(code: string, entry: string): Promise<string | null> {
   try {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 8000);
+    const t = setTimeout(() => ctrl.abort(), 20000);
     const r = await fetch(SNACK_API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -315,10 +317,11 @@ async function createExpoGoLink(code: string, entry: string): Promise<string | n
       signal: ctrl.signal,
     });
     clearTimeout(t);
-    if (!r.ok) return null;
+    if (!r.ok) { console.error("snack api status", r.status); return null; }
     const d = (await r.json()) as { expUrl?: string; snackUrl?: string };
     return d.expUrl ?? d.snackUrl?.replace("https://snack.expo.dev/", "exp://exp.host/") ?? null;
-  } catch {
+  } catch (e) {
+    console.error("snack api failed", e);
     return null;
   }
 }
@@ -353,7 +356,7 @@ const baseHandler = createMcpHandler(
         limit: z
           .number()
           .min(1)
-          .max(10) 
+          .max(10)
           .optional()
           .describe("Max number of patterns to return (default 3)"),
         excludeMoods: z
@@ -468,10 +471,11 @@ const baseHandler = createMcpHandler(
       async ({ code, entryComponentName }, extra) => {
         const userId = (extra.authInfo?.extra?.userId as string | undefined) ?? "anonymous";
         const entry = entryComponentName || "App";
-        const [hash, expUrl] = await Promise.all([
+        const [hash, firstTry] = await Promise.all([
           savePreview(userId, code, entry),
           createExpoGoLink(code, entry),
         ]);
+        const expUrl = firstTry ?? (await createExpoGoLink(code, entry));
         return {
           content: [{ type: "text", text: "Preview rendered." }],
           structuredContent: { hash, code, entry, expUrl },
