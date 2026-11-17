@@ -54,7 +54,11 @@ export async function POST(req: Request) {
         const MCP_VARIANT_ID = process.env.LS_MCP_VARIANT_ID
           ? parseInt(process.env.LS_MCP_VARIANT_ID)
           : null;
-        const isMcpPlan = MCP_VARIANT_ID && variantId === MCP_VARIANT_ID;
+        const MCP_YEARLY_VARIANT_ID = process.env.LS_MCP_YEARLY_VARIANT_ID
+          ? parseInt(process.env.LS_MCP_YEARLY_VARIANT_ID)
+          : null;
+        const isMcpYearly = !!MCP_YEARLY_VARIANT_ID && variantId === MCP_YEARLY_VARIANT_ID;
+        const isMcpPlan = (!!MCP_VARIANT_ID && variantId === MCP_VARIANT_ID) || isMcpYearly;
 
         // Get your variant IDs from LemonSqueezy dashboard
         const YEARLY_VARIANT_ID = process.env.LS_YEARLY_VARIANT_ID
@@ -65,7 +69,7 @@ export async function POST(req: Request) {
         let expiresAt: Date | null = null;
         if (endsAt) {
           expiresAt = new Date(endsAt);
-        } else if (variantId && YEARLY_VARIANT_ID && variantId === YEARLY_VARIANT_ID) {
+        } else if ((variantId && YEARLY_VARIANT_ID && variantId === YEARLY_VARIANT_ID) || isMcpYearly) {
           // Yearly plan — expire in 1 year
           expiresAt = new Date();
           expiresAt.setFullYear(expiresAt.getFullYear() + 1);
